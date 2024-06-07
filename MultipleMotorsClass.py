@@ -75,8 +75,8 @@ async def run():
     await motor1_operations.perform_operations(absolute_position=50, relative_steps=1000, jog_direction="-", jog_duration=3)
 
     # Motor 2 operations
-    motor2_operations = MotorOperations(controller, motor=2)
-    await motor2_operations.perform_operations(absolute_position=75, relative_steps=2000, jog_direction="+", jog_duration=2)
+    # motor2_operations = MotorOperations(controller, motor=2)
+    # await motor2_operations.perform_operations(absolute_position=75, relative_steps=2000, jog_direction="+", jog_duration=2)
 
 
 if __name__ == "__main__":
