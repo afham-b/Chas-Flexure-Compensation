@@ -59,7 +59,7 @@ class MotorOperations:
             if abs(distance_to_target) < 0.001:
                 self.set_velocity(1)
             elif abs(distance_to_target) < 0.005:
-                self.set_velocity(10)
+                self.set_velocity(3)
             elif abs(distance_to_target) < 0.01:
                 self.set_velocity(self.very_close_speed)
             elif abs(distance_to_target) < 0.05:
@@ -81,11 +81,12 @@ class MotorOperations:
 
         #home the motor first
         print(f'Motor {self.motor}')
-        await self.jog_until(laser, 0.00, 0.005, stop_event=stop_event)
+        await self.jog_until(laser, 0.00, 0.0001, stop_event=stop_event)
         await asyncio.sleep(5)
         print(f'Motor {self.motor}')
         await self.jog_until(laser, -0.02, stop_event=stop_event)
         print("Position: 80.02mm from laser")
+        await asyncio.sleep(5)
         await self.jog_until(laser, 0.02, stop_event=stop_event)
         print("Position: 79.98mm from laser")
 
