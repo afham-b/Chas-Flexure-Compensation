@@ -10,7 +10,7 @@ from pylablib.devices import Newport
 
 
 class MotorOperations:
-    def __init__(self, controller, motor, default_speed=1750, close_speed=500, very_close_speed=20):
+    def __init__(self, controller, motor, default_speed=1500, close_speed=500, very_close_speed=20):
         self.controller = controller
         self.motor = motor
         self.default_speed = default_speed
@@ -31,7 +31,9 @@ class MotorOperations:
             await asyncio.sleep(0.1)
         return self.controller.get_position(self.motor)
 
-    async def jog_until(self, laser, target_distance, margin=0.0005, stop_event=None):
+   # modfiy the margin parameter to get smaller margin of errors from target (will be slower)
+   # current margin is 1 micron
+    async def jog_until(self, laser, target_distance, margin=0.0001, stop_event=None):
         address = self.controller.get_addr()
         current_distance = laser.measure(verbose=True)
         if current_distance is None:
@@ -54,12 +56,16 @@ class MotorOperations:
                 direction = new_direction
 
             # Adjust speed based on distance to target
-            if abs(distance_to_target) < 0.005:
+            if abs(distance_to_target) < 0.001:
+                self.set_velocity(1)
+            elif abs(distance_to_target) < 0.005:
                 self.set_velocity(10)
             elif abs(distance_to_target) < 0.01:
                 self.set_velocity(self.very_close_speed)
             elif abs(distance_to_target) < 0.05:
                 self.set_velocity(self.close_speed)
+            elif abs(distance_to_target) < 0.1:
+                self.set_velocity(1000)
             else:
                 self.set_velocity(self.default_speed)
 
@@ -76,6 +82,7 @@ class MotorOperations:
         #home the motor first
         print(f'Motor {self.motor}')
         await self.jog_until(laser, 0.00, 0.005, stop_event=stop_event)
+        await asyncio.sleep(5)
         print(f'Motor {self.motor}')
         await self.jog_until(laser, -0.02, stop_event=stop_event)
         print("Position: 80.02mm from laser")
@@ -145,7 +152,7 @@ async def laser_logging_task(laser, logfile, stop_event, duration=None):
         line = str(time.time() - start_time) + "\t" + str(zlaser) + "\n"
         logfile.write(line)
         measurements.append((time.time() - start_time, zlaser))
-        await asyncio.sleep(0.05)
+        await asyncio.sleep(0.001)
     return measurements
 
 
