@@ -83,11 +83,11 @@ class MotorOperations:
         print(f'Motor {self.motor}')
         await self.jog_until(laser, 0.00, 0.0001, stop_event=stop_event)
         await asyncio.sleep(5)
-        print(f'Motor {self.motor}')
-        await self.jog_until(laser, -0.02, stop_event=stop_event)
-        print("Position: 80.02mm from laser")
-        await asyncio.sleep(5)
-        await self.jog_until(laser, 0.02, stop_event=stop_event)
+        # print(f'Motor {self.motor}')
+        # await self.jog_until(laser, -0.02, stop_event=stop_event)
+        # print("Position: 80.02mm from laser")
+        # await asyncio.sleep(5)
+        await self.jog_until(laser, 0.82, stop_event=stop_event)
         print("Position: 79.98mm from laser")
 
 
