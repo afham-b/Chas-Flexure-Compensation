@@ -1,38 +1,23 @@
-import win32com.client
+from pywinauto import Application
 import time
-import os
-import pythoncom
 import win32api
 import win32con
+import os
 
-def open_metaguide():
-    # Start MetaGuide
-    mg_path = r'C:\Program Files (x86)\MetaGuide.exe'  # Change to the path of your MetaGuide executable
-    os.startfile(mg_path)
-    time.sleep(10)  # Wait for MetaGuide to open
+# win32 import usually crashes the code, but its usefull
+# import win32com.client
 
-def load_scope_setup(scope_setup_path):
-    # Load scope setup file (.mg)
-    MG = win32com.client.Dispatch("MetaGuide.Application")
-    MG.LoadScopeSetup(scope_setup_path)
-    time.sleep(5)  # Wait for the setup to load
+idguide      = win32api.RegisterWindowMessage("MG_RemoteGuide")
 
-def lock_star():
-    MG = win32com.client.Dispatch("MetaGuide.Application")
-    MG.LockStar()
-    time.sleep(2)  # Wait for the star to lock
+# Start MetaGuide
+# app = Application().start(r"C:\Program Files (x86)\MetaGuide\MetaGuide.exe")
+time.sleep(10)  # Wait for MetaGuide to open
 
-def start_guiding():
-    MG = win32com.client.Dispatch("MetaGuide.Application")
-    MG.StartGuiding()
-    print("Guiding started")
+# put in your metaguide setup file if its saved, ours is test1
+scope_setup_path = r'C:\Users\afham\Documents\MetaGuide\test1.mg'
+os.startfile(scope_setup_path)
+time.sleep(20)
 
-def main():
-    scope_setup_path = r'C:\Users\afham\Documents\MetaGuide\test1.mg'  # Change to the path of your .mg file
-    #open_metaguide()
-    load_scope_setup(scope_setup_path)
-    #lock_star()
-    #start_guiding()
+# start guide
+win32api.PostMessage(win32con.HWND_BROADCAST, idguide, 0, 0)
 
-if __name__ == "__main__":
-    main()

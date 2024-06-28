@@ -19,6 +19,7 @@ idexit       = win32api.RegisterWindowMessage("MG_RemoteExit")
 iddither     = win32api.RegisterWindowMessage("MG_RemoteDither")
 idmeridianflip = win32api.RegisterWindowMessage("MG_RemoteMeridianFlip")
 idrotatorangle = win32api.RegisterWindowMessage("MG_RemoteRotatorAngle")
+# me attempt : idlock       = win32api.RegisterWindowMessage('MG_Lock')
 
 # example to shift by +10"/hour in RA and -10"/hour in Dec:
 # Rate is based on 10000 + SignedArcSecPerHour
