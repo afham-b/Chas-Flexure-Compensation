@@ -3,7 +3,7 @@ FNum 10.000000
 Barlow 0.700000
 CalFactor 1.000000
 SecObs 34.000000
-Declination 0.000057
+Declination -0.000000
 DecRate 0.500000
 RARate 0.500000
 Rotation 0.000000
@@ -31,7 +31,7 @@ DecLashMinus 0.000000
 DecReverse 0.000000
 NSReversed 0
 GuideX 0
-GuideY 959
+GuideY 957
 AdvancedView 1
 PromptLogComment 1
 OutputDir C:\Users\afham\Documents\MetaGuide
@@ -39,8 +39,8 @@ ASCOMScopeName ASCOM.Simulator.Telescope
 CameraWidth 960
 CameraHeight 960
 LockRadius 15
-DoBroadcast 0
-BroadcastMask 192.168.1.255
+DoBroadcast 1
+BroadcastMask 10.207.127.255
 BroadcastPort 1277
 IgnoreSatStars 0
 CalcSeeing 1
