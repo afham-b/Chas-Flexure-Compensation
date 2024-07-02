@@ -24,6 +24,10 @@ class MGListener(threading.Thread):
     Default port is 1277 to match default in MetaGuide->Setup->Extra dialog
     """
     def __init__(self, port=1277, timeout=2, deadtime=20):
+
+        # start threading if giving threading error, otherwise comment out
+        # threading.Thread.__init__(self)
+
         self.port = port
         self.timeout = timeout
         self.deadtime = deadtime
@@ -107,11 +111,11 @@ class MGListener(threading.Thread):
         except:
             pass
 
-    def doit(self):
-        """
-        Subclass this class and insert your functionality here.
-        """
-        pass
+    #def doit(self):
+    #    """
+    #    Subclass this class and insert your functionality here.
+    #    """
+    #    pass
 
     def isDead(self):
         #print("MG is not responding")
@@ -279,7 +283,7 @@ class MyListener(MGListener):
     Simple example showing how to subclass MGListener to act on data from MetaGuide
     """
     def doit(self):
-        #print("The x, y coordinates of the star are: ", self.x, self.y)
+        print("The x, y coordinates of the star are: ", self.x, self.y)
         print("%s : %s"%(self.msg, self.msgtxt))
 
 class MGMonitor(threading.Thread):
