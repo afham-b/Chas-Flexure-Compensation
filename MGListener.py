@@ -33,6 +33,8 @@ class MGListener(threading.Thread):
         self.deadtime = deadtime
         self.x = -1             # x coordinate of centroid
         self.y = -1             # y
+        self.x_init = -1        # initial x coordinate
+        self.y_init = -1        # initial y coordinate
         self.ew = 0             # east/west component relative to center of screen
         self.ns = 0             # north/south
         self.ewcos = 0          # east/west component boosted by 1/cos(dec) for axis angle
@@ -153,6 +155,7 @@ class MGListener(threading.Thread):
         """
         # print("Running MGListener thread")
         tlastmsg = time.time()
+        loop_tracker = 0
         while self.listenMessages:
             try:
                 # non-blocking select with timeout so it doesn't get stuck
@@ -270,7 +273,12 @@ class MGListener(threading.Thread):
 
             # only get here if a good message was received and parsed
             # now invoke the user's function in a subclass
+            if loop_tracker == 0:
+                self.firstxy()
+            loop_tracker = loop_tracker + 1
+
             self.doit()
+
 
             # Release the lock and don't care if already released
             try:
@@ -282,9 +290,16 @@ class MyListener(MGListener):
     """
     Simple example showing how to subclass MGListener to act on data from MetaGuide
     """
+    def firstxy(self):
+        self.x_init = self.x
+        self.y_init = self.y
+        #print("Initial X, Y of the star are: ", self.x_init, self.y_init)
+
     def doit(self):
-        print("The x, y coordinates of the star are: ", self.x, self.y)
-        print("%s : %s"%(self.msg, self.msgtxt))
+        delta_x = round((self.x - self.x_init), 4)
+        delta_y = round((self.y - self.y_init), 4)
+        print("x:" + str(self.x) + " y: " + str(self.y) + " delt x: " + str(delta_x) + " delt y: " + str(delta_y))
+        # print("%s : %s"%(self.msg, self.msgtxt))
 
 class MGMonitor(threading.Thread):
     """

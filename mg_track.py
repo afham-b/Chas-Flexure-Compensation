@@ -42,14 +42,30 @@ def main():
     # time.sleep(10)  # Wait for MetaGuide to open
 
     # can also start MetaGuide this way:
-    idguide = win32api.RegisterWindowMessage("MG_RemoteGuide")
+    # idguide = win32api.RegisterWindowMessage("MG_RemoteGuide")
     # win32api.PostMessage(win32con.HWND_BROADCAST, idguide, 0, 0)
 
     # We're starting with a saved MetaGuide setup file: test1
     # remember to change to your own path!
-    scope_setup_path = r'C:\Users\linz\Documents\GitHub\Picomotor-Controls-1\test1.mg'
+    scope_setup_path = r'C:\Users\afham\Documents\MetaGuide\test1.mg'
     os.startfile(scope_setup_path)
-    time.sleep(10)
+    time.sleep(3)
+
+
+    # measure and modify the two parameters below for your magnification %
+    # distance in mm
+    distance_lens_lightsource = 118
+    distance_lens_ccd = 83
+    magnification = distance_lens_ccd / distance_lens_lightsource
+
+    #pixel size (micrometer) can be found on camera specifications sheet
+    # for asi290mini pixel size is 2.9 microns, effective pixel size is ~ 4microns/pixel
+    camera_pixel_size = 2.9
+    effective_pixel_size = camera_pixel_size / magnification
+
+    # set scale factor for picomotor motion from camera feedback
+    motion_scale = 1
+    correction_scale = effective_pixel_size * motion_scale
 
     # if you want to see monitoring graphs, not necessary for code, just optional
     # monitor_path = r'C:\Program Files (x86)\MetaGuide\MetaMonitor.exe'
@@ -62,26 +78,29 @@ def main():
     listener.start()
     # Wait for the listener to receive the first message
     while not listener.isAlive():
+        if listener.isAlive():
+            print('Listener Live!')
+            # Print the initial x and y coordinates
+            # x, y, intens = listener.getXYI()
+            # print(f"Initial coordinates: x={x}, y={y}, intensity={intens}")
         time.sleep(0.1)
-    if listener.isAlive():
-        print('Listener Live!')
-    # Print the initial x and y coordinates
-        x, y, intens = listener.getXYI()
-        print(f"Initial coordinates: x={x}, y={y}, intensity={intens}")
+
 
     # Monitor stuff
     # in MetaGuide, open setup button (bottom bar)-> extra tab -> make sure Broadcast is checked
     # look at extra settings for port or ip settings, otherwise monitor may not work
     # you need to take your current connected router's ip4v address and its subnet mask to calculate the broadcast mask
-    # for the current router in Lab the broadcast is 10.206.255.255
+    # for the current router in Lab the broadcast is 10.206.255.255, it varies per router per device
 
     monitor = MGMonitor(listener)
     monitor.start()
     while not monitor.is_alive():
+        if monitor.is_alive():
+            print('Monitor Live!')
+            # monitor.dumpState()
         time.sleep(0.1)
-    if monitor.is_alive():
-        print('Monitor Live!')
-        #monitor.dumpState()
+
+    x_init, y_init = listener.x_init, listener.y_init
 
 
     # Shut down MetaGuide using PIDs and signal
@@ -142,3 +161,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
