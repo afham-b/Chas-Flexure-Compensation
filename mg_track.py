@@ -1,8 +1,8 @@
-from pywinauto import Application
-import time
-import win32api
-import win32con
+# import win32api
+# import win32con
+# from pywinauto import Application
 import os
+import time
 import threading
 import socket
 import time
@@ -89,8 +89,11 @@ def main():
     # Monitor stuff
     # in MetaGuide, open setup button (bottom bar)-> extra tab -> make sure Broadcast is checked
     # look at extra settings for port or ip settings, otherwise monitor may not work
-    # you need to take your current connected router's ip4v address and its subnet mask to calculate the broadcast mask
+    # you need to take your current connected router's ipv4 address and its subnet mask to calculate the broadcast mask
     # for the current router in Lab the broadcast is 10.206.255.255, it varies per router per device
+
+    # you can use windows test loopback adapter for local network and bypasses need for router, use cmd ipconfig/all
+    # to find ipv4 and subnet mask for the test loopback adapter once you've installed it from device manager.
 
     monitor = MGMonitor(listener)
     monitor.start()
