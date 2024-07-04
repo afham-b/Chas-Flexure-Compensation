@@ -9,13 +9,26 @@ import clr
 import numpy as np
 from ctypes import byref, c_int
 
+import serial
+import io
+import datetime
+import threading
+import matplotlib.pyplot as plt
+
 from pylablib.devices import Newport
 
 
 class MotorOperations:
-    def __init__(self, controller, motor):
+    def __init__(self, controller, motor, default_speed=1750, close_speed=800, very_close_speed=40):
         self.controller = controller
         self.motor = motor
+        self.default_speed = default_speed
+        self.close_speed = close_speed
+        self.very_close_speed = very_close_speed
+        self.set_velocity(self.default_speed, acceleration=10000)
+
+    def set_velocity(self, speed, acceleration=10000):
+        self.controller.setup_velocity(self.motor, speed=speed, accel=acceleration)
 
     async def get_position(self):
         while True:
@@ -24,7 +37,7 @@ class MotorOperations:
                     break
             except Exception as e:
                 print(f"Error checking if motor is moving: {e}")
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.005)
         return self.controller.get_position(self.motor)
 
     async def jog_for_duration(self, direction, duration):
@@ -33,13 +46,23 @@ class MotorOperations:
         await asyncio.sleep(duration)
         self.controller.stop(axis='all', immediate=True)  # Use 'all' for immediate stop
 
-    async def move_to_position(self, position):
+    async def move_to_position(self, position, stop_event=None):
+        """
+        Move to an absolute position.
+        """
         self.controller.move_to(self.motor, position)
-        return await self.get_position()
+        while not (stop_event and stop_event.is_set()) and self.controller.is_moving(self.motor):
+            await asyncio.sleep(0.001)
+        await asyncio.sleep(2)  # Pause for 2 seconds
 
-    async def move_by_steps(self, steps):
+    async def move_by_steps(self, steps, stop_event=None):
+        """
+        Move by a number of steps.
+        """
         self.controller.move_by(self.motor, steps)
-        return await self.get_position()
+        while not (stop_event and stop_event.is_set()) and self.controller.is_moving(self.motor):
+            await asyncio.sleep(0.001)
+        await asyncio.sleep(2)  # Pause for 2 seconds
 
     async def perform_operations(self, absolute_position, relative_steps, jog_direction, jog_duration):
         print(f'Motor {self.motor}')

@@ -1,9 +1,6 @@
 import sys
 import time
 import asyncio
-import serial
-import io
-import datetime
 import threading
 import matplotlib.pyplot as plt
 from pylablib.devices import Newport
@@ -47,14 +44,14 @@ class MotorOperations:
         self.controller.move_by(self.motor, steps)
         while not (stop_event and stop_event.is_set()) and self.controller.is_moving(self.motor):
             await asyncio.sleep(0.001)
-        await asyncio.sleep(5)  # Pause for 2 seconds
+        await asyncio.sleep(3)  # Pause for n seconds
 
     async def set_position_reference(self, position=0):
         """
         Set the current position as the reference position.
         """
         self.controller.set_position_reference(self.motor, position)
-        await asyncio.sleep(5)  # Small delay to ensure the command is processed
+        await asyncio.sleep(3)  # Small delay to ensure the command is processed
 
     async def perform_operations(self, stop_event=None, distance=0.02):
         print(f'Motor {self.motor}')
@@ -85,77 +82,58 @@ class MotorOperations:
         await self.move_to_position(0, stop_event=stop_event)
         print("Position: Home (0.00mm)")
 
+    async def jog_until(self, laser, target_distance, margin=0.0001, stop_event=None):
+        address = self.controller.get_addr()
+        current_distance = laser.measure(verbose=True)
+        if current_distance is None:
+            print("Initial laser measurement failed. Aborting.")
+            return
 
-class LaserIO:
-    def __init__(self, laser_port="COM5"):
-        self.laser_port = laser_port
-        self.ser = serial.Serial(self.laser_port, 9600, timeout=0.25)
-        self.ser_io = io.TextIOWrapper(io.BufferedRWPair(self.ser, self.ser, 1),
-                                       newline='\r',
-                                       line_buffering=True)
-        self.normal_mode()
+        direction = "+" if current_distance > target_distance else "-"
+        self.controller.jog(self.motor, direction, address)
 
-    def normal_mode(self):
-        print("normal mode")
-        self.ser_io.write(u"R0\r")
-        out = self.ser_io.readline()
-        print(out)
+        while not (stop_event and stop_event.is_set()):
+            distance = laser.measure(verbose=True)
+            distance_to_target = distance - target_distance
 
-    def measure(self, verbose=True):
-        self.ser_io.write(u'M0\r')
-        out = self.ser_io.readline()
-        if verbose:
-            print(out)
+            # Determine direction based on the current position and target distance
+            new_direction = "+" if distance_to_target > 0 else "-"
+            if new_direction != direction:
+                print(f"Switching direction from {direction} to {new_direction}")
+                self.controller.stop(axis='all', immediate=True)
+                self.controller.jog(self.motor, new_direction, address)
+                direction = new_direction
 
-        i = out.rfind("M0,") + 3
-        if i == -1:
-            print("M0 measurement not found")
-            return None
-        j = out[i:].find(",")
-        head_val = out[i:i + j]
-        if verbose:
-            print(f"Laser measurement: {head_val} mm")
+            # Adjust speed based on distance to target
+            if abs(distance_to_target) < 0.001:
+                self.set_velocity(1)
+            elif abs(distance_to_target) < 0.005:
+                self.set_velocity(3)
+            elif abs(distance_to_target) < 0.01:
+                self.set_velocity(self.very_close_speed)
+            elif abs(distance_to_target) < 0.05:
+                self.set_velocity(self.close_speed)
+            elif abs(distance_to_target) < 0.1:
+                self.set_velocity(1000)
+            else:
+                self.set_velocity(self.default_speed)
 
-        if self.isfloat(head_val):
-            distance = float(head_val)
-            return distance
-        else:
-            print("Laser head out of range")
-            return None
+            if target_distance - margin <= distance <= target_distance + margin:
+                self.controller.stop(axis='all', immediate=True)
+                await asyncio.sleep(5)  # Pause for 5 seconds (this is for testing)
+                break
+            await asyncio.sleep(0.001)
 
-    def isfloat(self, value):
-        try:
-            float(value)
-            return True
-        except ValueError:
-            return False
-
-    def close(self):
-        self.ser.close()
-        return None
-
+        self.controller.stop(axis='all', immediate=True)
 
 async def motor_operations_task(controller, stop_event):
     motor1_operations = MotorOperations(controller, motor=1)
     await motor1_operations.perform_operations(stop_event=stop_event, distance=0.02)
 
-
-async def laser_logging_task(laser, logfile, stop_event, duration=None):
-    start_time = time.time()
-    measurements = []
-    while not (stop_event and stop_event.is_set()):
-        zlaser = laser.measure(verbose=True)
-        line = str(time.time() - start_time) + "\t" + str(zlaser) + "\n"
-        logfile.write(line)
-        measurements.append((time.time() - start_time, zlaser))
-        await asyncio.sleep(0.05)
-    return measurements
-
-
 def plot_measurements(measurements):
     times, distances = zip(*measurements)
     plt.figure()
-    plt.plot(times, distances, label="Distance from Laser")
+    plt.plot(times, distances, label="Distance from Motor")
     plt.axhline(y=0.02, color='r', linestyle='--', label="Target Distance +0.02mm")
     plt.axhline(y=-0.02, color='b', linestyle='--', label="Target Distance -0.02mm")
     plt.xlabel("Time (s)")
@@ -173,18 +151,8 @@ async def run(controller):
         duration = int(sys.argv[1])
         asyncio.get_event_loop().call_later(duration, stop_event.set)
 
-    laser = LaserIO()
-    logfile = open("laser_log_" + str(datetime.date.today()) + '_' + str(time.time()) + ".txt", 'w')
-
-    motor_task = motor_operations_task(controller, stop_event)
-    laser_task = laser_logging_task(laser, logfile, stop_event, duration)
-
-    laser_measurements = await asyncio.gather(motor_task, laser_task)
-    logfile.close()
-    laser.close()
-
-    plot_measurements(laser_measurements[1])
-
+    motor_task = asyncio.create_task(motor_operations_task(controller, stop_event))
+    await motor_task
 
 def stop_motors(controller):
     controller.stop(axis='all', immediate=True)
@@ -216,3 +184,6 @@ if __name__ == "__main__":
             loop.run_until_complete(run(controller))
         except asyncio.CancelledError:
             pass
+        finally:
+            loop.close()
+            controller.close()

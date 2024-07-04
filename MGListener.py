@@ -316,7 +316,7 @@ class MGMonitor(threading.Thread):
         """
         This call can be replaced by whatever you want to do with the info from MG
         """
-        print(self.mgl.x, self.mgl.y, self.mgl.ew, self.mgl.ns, self.mgl.intens, self.mgl.fwhm, self.mgl.de, self.mgl.dn, self.mgl.lock)
+        print(self.mgl.x, self.mgl.y, self.mgl.ew, self.mgl.ns, self.mgl.intens, self.mgl.fwhm, self.mgl.de, self.mgl.dn, self.mgl.sock)
 
     def run(self):
         """
@@ -326,7 +326,7 @@ class MGMonitor(threading.Thread):
             self.mgl.threadLock.acquire()
             if not self.mgl.listenMessages:
                 return
-            self.dumpState()
+            #self.dumpState()
 
 if __name__ == '__main__':
     """

@@ -37,6 +37,8 @@ from MGListener import MyListener, MGListener, MGMonitor
 
 def main():
 
+    # code to use PIDs to kill programs
+
     # can start MetaGuide via the plain.exe
     # app = Application().start(r"C:\Program Files (x86)\MetaGuide\MetaGuide.exe")
     # time.sleep(10)  # Wait for MetaGuide to open
