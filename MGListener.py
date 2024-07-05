@@ -1,9 +1,19 @@
 import threading
-import socket
 import time
 import sys
 import select
 import math
+
+#Needed for newport motor controller
+from pylablib.devices import Newport
+
+# make sure the PicomotorStandAlone.py and mg_pico.py file is in the same directory as this file
+
+import socket
+# udp socket thread to send over x and y values to mg_pico, leave as global vars pls
+XY_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+# set a port above 5000 and 127.0.0.1 refers to local host
+server_address = ('127.0.0.1', 5001)  # Adjust address and port as needed
 
 """
 This file can be used to capture UDP messages from MetaGuide indicating status of the guiding and many other values.
@@ -156,6 +166,7 @@ class MGListener(threading.Thread):
         # print("Running MGListener thread")
         tlastmsg = time.time()
         loop_tracker = 0
+
         while self.listenMessages:
             try:
                 # non-blocking select with timeout so it doesn't get stuck
@@ -279,12 +290,12 @@ class MGListener(threading.Thread):
 
             self.doit()
 
-
             # Release the lock and don't care if already released
             try:
                 self.threadLock.release()
             except:
                 pass
+        XY_sock.close()
 
 class MyListener(MGListener):
     """
@@ -298,8 +309,12 @@ class MyListener(MGListener):
     def doit(self):
         delta_x = round((self.x - self.x_init), 4)
         delta_y = round((self.y - self.y_init), 4)
-        print("x:" + str(self.x) + " y: " + str(self.y) + " delt x: " + str(delta_x) + " delt y: " + str(delta_y))
+        #print("x:" + str(self.x) + " y: " + str(self.y) + " delt x: " + str(delta_x) + " delt y: " + str(delta_y))
         # print("%s : %s"%(self.msg, self.msgtxt))
+
+        # Send delt_x and delt_y
+        message = f'{delta_x},{delta_y}'
+        XY_sock.sendto(message.encode(), server_address)
 
 class MGMonitor(threading.Thread):
     """
@@ -332,12 +347,15 @@ if __name__ == '__main__':
     """
     Simple example showing how you can subclass MGListener to act on your own doit() function when a UDP message is received
     """
+    # Set up another UDP socket to send delta x and delta y to mg_pico
+
 
     ml = MyListener()
     ml.start()
     input("Press to end\n")
     ml.stop()
     ml.join()
+
     #return
 
     """
