@@ -76,18 +76,16 @@ def start_server():
         client_handler.start()
 
 
-async def control_picomotors(delt_x, delt_y):
-    # These deltas are in pixels
-    print('Server output,' + str(delt_x) + ',' + str(delt_y))
+def main():
+    # can start MetaGuide via the plain.exe
+    # app = Application().start(r"C:\Program Files (x86)\MetaGuide\MetaGuide.exe")
+    # time.sleep(10)  # Wait for MetaGuide to open
 
-    # Convert these deltas into microns * some arbitrary correction scale
-    move_x = delt_x * correction_scale
-    move_y = delt_y * correction_scale
+    # can also start MetaGuide this way:
+    # idguide = win32api.RegisterWindowMessage("MG_RemoteGuide")
+    # win32api.PostMessage(win32con.HWND_BROADCAST, idguide, 0, 0)
 
-    # Convert microns into steps, once picomotor step is 20 nm
-    steps_x = move_x / 0.02
-    steps_y = move_y / 0.02
-
+    # code below starts picomotor controller 8742 communication
     n = Newport.get_usb_devices_number_picomotor()
     if n == 0:
         print("No Picomotor devices found.")
@@ -101,18 +99,6 @@ async def control_picomotors(delt_x, delt_y):
     except Exception as e:
         print(f"Error connecting to the Picomotor controller: {e}")
         return
-
-    #motor1_operations = PicomotorStandAlone.MotorOperations(controller, motor=1)
-    #await motor1_operations.move_by_steps(steps_x)
-
-def main():
-    # can start MetaGuide via the plain.exe
-    # app = Application().start(r"C:\Program Files (x86)\MetaGuide\MetaGuide.exe")
-    # time.sleep(10)  # Wait for MetaGuide to open
-
-    # can also start MetaGuide this way:
-    # idguide = win32api.RegisterWindowMessage("MG_RemoteGuide")
-    # win32api.PostMessage(win32con.HWND_BROADCAST, idguide, 0, 0)
 
     # We're starting with a saved MetaGuide setup file: test1
     # remember to change to your own path!
@@ -138,7 +124,6 @@ def main():
             # print(f"Initial coordinates: x={x}, y={y}, intensity={intens}")
         time.sleep(0.1)
 
-
     # Monitor stuff
     # in MetaGuide, open setup button (bottom bar)-> extra tab -> make sure Broadcast is checked
     # look at extra settings for port or ip settings, otherwise monitor may not work
@@ -156,6 +141,22 @@ def main():
             # monitor.dumpState()
         time.sleep(0.1)
 
+    def control_picomotors(delt_x, delt_y):
+        # These deltas are in pixels
+        print('Server output,' + str(delt_x) + ',' + str(delt_y))
+
+        # Convert these deltas into microns * some arbitrary correction scale
+        move_x = delt_x * correction_scale
+        move_y = delt_y * correction_scale
+
+        # Convert microns into steps, once picomotor step is 20 nm
+        steps_x = move_x / 0.02
+        steps_y = move_y / 0.02
+
+        motor1_operations = PicomotorStandAlone.MotorOperations(controller, motor=1)
+        print(motor1_operations)
+        #motor1_operations.move_by_steps(steps_x)
+
 
     async def receive_data():
         # Set up UDP socket to listen
@@ -168,7 +169,8 @@ def main():
             delt_x, delt_y = map(float, data.decode().split(','))
 
             # Process received data to control the picomotors
-            await control_picomotors(delt_x, delt_y)
+            asyncio.create_task(control_picomotors(delt_x, delt_y))
+            await asyncio.sleep(0.01)
 
     asyncio.run(receive_data())
     # receive_data()
