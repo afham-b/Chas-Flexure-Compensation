@@ -37,14 +37,17 @@ class MotorOperations:
             await asyncio.sleep(0.001)
         await asyncio.sleep(2)  # Pause for 2 seconds
 
-    async def move_by_steps(self, steps, stop_event=None):
+    # async def move_by_steps(self, steps, stop_event=None):
+    def move_by_steps(self, steps, stop_event=None):
         """
         Move by a number of steps.
         """
         self.controller.move_by(self.motor, steps)
         while not (stop_event and stop_event.is_set()) and self.controller.is_moving(self.motor):
-            await asyncio.sleep(0.001)
-        await asyncio.sleep(3)  # Pause for n seconds
+            # await asyncio.sleep(0.001)
+            time.sleep(0.001)
+        # await asyncio.sleep(0.001)  # Pause for n seconds
+        time.sleep(0.001)
 
     async def set_position_reference(self, position=0):
         """

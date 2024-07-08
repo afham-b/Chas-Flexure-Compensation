@@ -96,6 +96,10 @@ def main():
     try:
         controller = Newport.Picomotor8742()
         print(controller)
+        motor1_operations = PicomotorStandAlone.MotorOperations(controller, motor=1)
+        # for testing to see motors move:
+        # motor2_operations = PicomotorStandAlone.MotorOperations(controller, motor=2)
+        # motor1_operations.move_by_steps(1000, stop_event=None)
     except Exception as e:
         print(f"Error connecting to the Picomotor controller: {e}")
         return
@@ -141,7 +145,7 @@ def main():
             # monitor.dumpState()
         time.sleep(0.1)
 
-    def control_picomotors(delt_x, delt_y):
+    async def control_picomotors(delt_x, delt_y):
         # These deltas are in pixels
         print('Server output,' + str(delt_x) + ',' + str(delt_y))
 
@@ -149,14 +153,16 @@ def main():
         move_x = delt_x * correction_scale
         move_y = delt_y * correction_scale
 
-        # Convert microns into steps, once picomotor step is 20 nm
-        steps_x = move_x / 0.02
-        steps_y = move_y / 0.02
+        #the pico motor moves 20 nm per step, adjust this value based on the mas the motor moves
+        step_size = 0.02
+
+        # Convert microns into steps, once picomotor step is 20 nm (default denominator is 0.02)
+        steps_x = move_x / step_size
+        steps_y = move_y / step_size
 
         motor1_operations = PicomotorStandAlone.MotorOperations(controller, motor=1)
         print(motor1_operations)
-        #motor1_operations.move_by_steps(steps_x)
-
+        motor1_operations.move_by_steps(steps_x)
 
     async def receive_data():
         # Set up UDP socket to listen
