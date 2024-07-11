@@ -5,6 +5,11 @@ import threading
 import matplotlib.pyplot as plt
 from pylablib.devices import Newport
 
+import socket
+XY_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+server_address = ('127.0.0.1', 5001)  # Use the same address and port as MGListener
+XY_sock.bind(server_address)
+
 
 class MotorOperations:
     def __init__(self, controller, motor, default_speed=1750, close_speed=800, very_close_speed=40):
@@ -14,6 +19,14 @@ class MotorOperations:
         self.close_speed = close_speed
         self.very_close_speed = very_close_speed
         self.set_velocity(self.default_speed, acceleration=10000)
+        self.delt_x = 0
+        self.delt_y = 0
+
+    def start_sock_data(self):
+        while True:
+            data, _ = XY_sock.recvfrom(4096)  # Buffer size
+            self.delt_x, self.delt_y = map(float, data.decode().split(','))
+            time.sleep(0.01)
 
     def set_velocity(self, speed, acceleration=10000):
         self.controller.setup_velocity(self.motor, speed=speed, accel=acceleration)
@@ -122,6 +135,49 @@ class MotorOperations:
                 self.set_velocity(self.default_speed)
 
             if target_distance - margin <= distance <= target_distance + margin:
+                self.controller.stop(axis='all', immediate=True)
+                await asyncio.sleep(5)  # Pause for 5 seconds (this is for testing)
+                break
+            await asyncio.sleep(0.001)
+
+        self.controller.stop(axis='all', immediate=True)
+
+    async def joggin(self, target_distance=0, margin=0.1, stop_event=None):
+        address = self.controller.get_addr()
+
+        if self.delt_y is None:
+            print("Initial laser measurement failed. Aborting.")
+            return
+
+        direction = "+" if self.delt_y > target_distance else "-"
+        self.controller.jog(self.motor, direction, address)
+
+        while not (stop_event and stop_event.is_set()):
+            distance_to_target = self.delt_y - target_distance
+
+            # Determine direction based on the current position and target distance
+            new_direction = "+" if distance_to_target > 0 else "-"
+            if new_direction != direction:
+                print(f"Switching direction from {direction} to {new_direction}")
+                self.controller.stop(axis='all', immediate=True)
+                self.controller.jog(self.motor, new_direction, address)
+                direction = new_direction
+
+            # Adjust speed based on distance to target
+            if abs(distance_to_target) < 0.001:
+                self.set_velocity(1)
+            elif abs(distance_to_target) < 0.005:
+                self.set_velocity(3)
+            elif abs(distance_to_target) < 0.01:
+                self.set_velocity(self.very_close_speed)
+            elif abs(distance_to_target) < 0.05:
+                self.set_velocity(self.close_speed)
+            elif abs(distance_to_target) < 0.1:
+                self.set_velocity(1000)
+            else:
+                self.set_velocity(self.default_speed)
+
+            if target_distance - margin <= self.delt_y <= target_distance + margin:
                 self.controller.stop(axis='all', immediate=True)
                 await asyncio.sleep(5)  # Pause for 5 seconds (this is for testing)
                 break

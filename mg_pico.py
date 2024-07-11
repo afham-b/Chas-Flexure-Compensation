@@ -160,9 +160,15 @@ def main():
         steps_x = move_x / step_size
         steps_y = move_y / step_size
 
-        motor1_operations = PicomotorStandAlone.MotorOperations(controller, motor=1)
-        print(motor1_operations)
-        motor1_operations.move_by_steps(steps_x)
+        motor_y = PicomotorStandAlone.MotorOperations(controller, motor=1)
+        # print(motor1_operations)
+        motor_y.start_sock_data()
+        await motor_y.joggin()
+        # motor1_operations.move_by_steps(steps_x)
+
+        sock_data_task = asyncio.create_task(motor_y.start_sock_data())
+        joggin_task = asyncio.create_task(motor_y.joggin())
+        await asyncio.gather(sock_data_task, joggin_task)
 
     async def receive_data():
         # Set up UDP socket to listen
