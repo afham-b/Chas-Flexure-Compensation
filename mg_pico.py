@@ -176,9 +176,16 @@ def main():
         server_address = ('127.0.0.1', 5001)  # Use the same address and port as MGListener
         XY_sock.bind(server_address)
 
+        Pico_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        Pico_server_address = ('127.0.0.1', 5002)
+
         while True:
             data, _ = XY_sock.recvfrom(4096)  # Buffer size
             delt_x, delt_y = map(float, data.decode().split(','))
+
+            #send delta_x and delta_y to the picomotor socket
+            message = f'{delt_x},{delt_y}'
+            Pico_sock.sendto(message.encode(), Pico_server_address)
 
             # Process received data to control the picomotors
             asyncio.create_task(control_picomotors(delt_x, delt_y))
