@@ -162,30 +162,22 @@ def main():
 
         motor_y = PicomotorStandAlone.MotorOperations(controller, motor=1)
         # print(motor1_operations)
-        motor_y.start_sock_data()
-        await motor_y.joggin()
-        # motor1_operations.move_by_steps(steps_x)
+        #await motor_y.joggin()
+        motor1_operations.move_by_steps(steps_x)
 
-        sock_data_task = asyncio.create_task(motor_y.start_sock_data())
-        joggin_task = asyncio.create_task(motor_y.joggin())
-        await asyncio.gather(sock_data_task, joggin_task)
+        # sock_data_task = asyncio.create_task(motor_y.start_sock_data())
+        # joggin_task = asyncio.create_task(motor_y.joggin())
+        # await asyncio.gather(sock_data_task, joggin_task)
 
     async def receive_data():
         # Set up UDP socket to listen
         XY_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        server_address = ('127.0.0.1', 5001)  # Use the same address and port as MGListener
+        server_address = ('127.0.0.1', 5011)  # Use the same address and port as MGListener
         XY_sock.bind(server_address)
-
-        Pico_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        Pico_server_address = ('127.0.0.1', 5002)
 
         while True:
             data, _ = XY_sock.recvfrom(4096)  # Buffer size
             delt_x, delt_y = map(float, data.decode().split(','))
-
-            #send delta_x and delta_y to the picomotor socket
-            message = f'{delt_x},{delt_y}'
-            Pico_sock.sendto(message.encode(), Pico_server_address)
 
             # Process received data to control the picomotors
             asyncio.create_task(control_picomotors(delt_x, delt_y))
