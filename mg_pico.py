@@ -76,7 +76,7 @@ def start_server():
         client_handler.start()
 
 
-def main():
+async def main():
     # can start MetaGuide via the plain.exe
     # app = Application().start(r"C:\Program Files (x86)\MetaGuide\MetaGuide.exe")
     # time.sleep(10)  # Wait for MetaGuide to open
@@ -96,10 +96,11 @@ def main():
     try:
         controller = Newport.Picomotor8742()
         print(controller)
-        motor1_operations = PicomotorStandAlone.MotorOperations(controller, motor=1)
+        motor_y = PicomotorStandAlone.MotorOperations(controller, motor=1)
         # for testing to see motors move:
-        # motor2_operations = PicomotorStandAlone.MotorOperations(controller, motor=2)
-        # motor1_operations.move_by_steps(1000, stop_event=None)
+        # motor_x = PicomotorStandAlone.MotorOperations(controller, motor=2)
+        # motor_y.move_by_steps(1000, stop_event=None)
+        # motor_x.move_by_steps(1000, stop_event=None)
     except Exception as e:
         print(f"Error connecting to the Picomotor controller: {e}")
         return
@@ -160,10 +161,10 @@ def main():
         steps_x = move_x / step_size
         steps_y = move_y / step_size
 
-        motor_y = PicomotorStandAlone.MotorOperations(controller, motor=1)
+        # motor_y = PicomotorStandAlone.MotorOperations(controller, motor=1)
         # print(motor1_operations)
-        #await motor_y.joggin()
-        motor1_operations.move_by_steps(steps_x)
+        # await motor_y.joggin()
+        # motor_y.move_by_steps(steps_x)
 
         # sock_data_task = asyncio.create_task(motor_y.start_sock_data())
         # joggin_task = asyncio.create_task(motor_y.joggin())
@@ -175,6 +176,10 @@ def main():
         server_address = ('127.0.0.1', 5001)  # Use the same address and port as MGListener
         XY_sock.bind(server_address)
 
+        # attempting to make second socket to send duplicate delta_x and delta_y values
+        # Pico_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # server_address = ('127.0.0.1', 5002)
+
         while True:
             data, _ = XY_sock.recvfrom(4096)  # Buffer size
             delt_x, delt_y = map(float, data.decode().split(','))
@@ -183,8 +188,16 @@ def main():
             asyncio.create_task(control_picomotors(delt_x, delt_y))
             await asyncio.sleep(0.01)
 
-    asyncio.run(receive_data())
-    # receive_data()
+    #asyncio.run(motor_y.start_sock_data())
+    #asyncio.run(receive_data())
+
+    async def starting():
+        await asyncio.gather(
+            motor_y.start_sock_data(),
+            receive_data()
+        )
+
+    await starting()
 
     # Shut down MetaGuide using PIDs and signal
     def kill_processes(pids, sig=signal.SIGTERM):
@@ -243,5 +256,5 @@ def main():
         main()"""
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
