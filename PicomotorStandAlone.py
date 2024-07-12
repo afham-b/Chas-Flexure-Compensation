@@ -7,7 +7,7 @@ from pylablib.devices import Newport
 
 import socket
 #XY_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-#server_address = ('127.0.0.1', 5011)  # Use the same address and port as MGListener
+#server_address = ('127.0.0.1', 5001)  # Use the same address and port as MGListener
 #XY_sock.bind(server_address)
 
 class MotorOperations:

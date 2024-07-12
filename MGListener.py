@@ -13,7 +13,7 @@ import socket
 # udp socket thread to send over x and y values to mg_pico, leave as global vars pls
 XY_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # set a port above 5000 and 127.0.0.1 refers to local host
-server_address = ('127.0.0.1', 5011)  # Adjust address and port as needed
+server_address = ('127.0.0.1', 5001)  # Adjust address and port as needed
 
 """
 This file can be used to capture UDP messages from MetaGuide indicating status of the guiding and many other values.
