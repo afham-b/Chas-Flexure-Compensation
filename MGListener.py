@@ -288,7 +288,7 @@ class MGListener(threading.Thread):
 
             # only get here if a good message was received and parsed
             # now invoke the user's function in a subclass
-            if loop_tracker == 0:
+            if loop_tracker == 5:
                 self.firstxy()
             loop_tracker = loop_tracker + 1
 
