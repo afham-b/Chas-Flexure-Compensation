@@ -50,17 +50,17 @@ class MotorOperations:
         steps_x = move_x / self.step_size
         steps_y = move_y / self.step_size
 
-        self.move_by_steps(steps_y)
+        #direction = "+" if self.delt_y > 0 else "-"
 
+        self.move_by_steps(steps_y)
 
     async def start_sock_data(self):
         while True:
             data, _ = pico_sock.recvfrom(4096)  # Buffer size
             self.delt_x, self.delt_y = map(float, data.decode().split(','))
-            print('Socket data received: ' + str(self.delt_x) + str(self.delt_y))
+            #print('Socket data received: ' + str(self.delt_x) + str(self.delt_y))
             asyncio.create_task(self.control_picomotors())
             await asyncio.sleep(0.01)
-            time.sleep(0.01)
 
     def set_velocity(self, speed, acceleration=10000):
         self.controller.setup_velocity(self.motor, speed=speed, accel=acceleration)
@@ -132,7 +132,7 @@ class MotorOperations:
         await self.move_to_position(0, stop_event=stop_event)
         print("Position: Home (0.00mm)")
 
-    async def jog_until(self, laser, target_distance, margin=0.0001, stop_event=None):
+    async def jog_until(self, laser, target_distance, margin=0.1, stop_event=None):
         address = self.controller.get_addr()
         current_distance = laser.measure(verbose=True)
         if current_distance is None:

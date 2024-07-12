@@ -288,7 +288,9 @@ class MGListener(threading.Thread):
 
             # only get here if a good message was received and parsed
             # now invoke the user's function in a subclass
-            if loop_tracker == 5:
+            if loop_tracker == 0:
+                self.firstxy()
+            elif loop_tracker == 25:
                 self.firstxy()
             loop_tracker = loop_tracker + 1
 
@@ -307,6 +309,7 @@ class MyListener(MGListener):
     Simple example showing how to subclass MGListener to act on data from MetaGuide
     """
     def firstxy(self):
+        time.sleep(0.1)
         self.x_init = self.x
         self.y_init = self.y
         #print("Initial X, Y of the star are: ", self.x_init, self.y_init)
