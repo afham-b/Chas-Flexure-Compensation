@@ -6,10 +6,9 @@ import matplotlib.pyplot as plt
 from pylablib.devices import Newport
 
 import socket
-XY_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-server_address = ('127.0.0.1', 5001)  # Use the same address and port as MGListener
-XY_sock.bind(server_address)
-
+#XY_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+#server_address = ('127.0.0.1', 5001)  # Use the same address and port as MGListener
+#XY_sock.bind(server_address)
 
 class MotorOperations:
     def __init__(self, controller, motor, default_speed=1750, close_speed=800, very_close_speed=40):
@@ -24,7 +23,7 @@ class MotorOperations:
 
     def start_sock_data(self):
         while True:
-            data, _ = XY_sock.recvfrom(4096)  # Buffer size
+            #data, _ = XY_sock.recvfrom(4096)  # Buffer size
             self.delt_x, self.delt_y = map(float, data.decode().split(','))
             time.sleep(0.01)
 
