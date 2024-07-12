@@ -15,6 +15,10 @@ XY_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # set a port above 5000 and 127.0.0.1 refers to local host
 server_address = ('127.0.0.1', 5001)  # Adjust address and port as needed
 
+# second socket to serve to Picomotor Standalone
+Pico_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+pico_server_address = ('127.0.0.1', 5002)
+
 """
 This file can be used to capture UDP messages from MetaGuide indicating status of the guiding and many other values.
 The core status message is emitted every 0.5s.
@@ -296,6 +300,7 @@ class MGListener(threading.Thread):
             except:
                 pass
         XY_sock.close()
+        Pico_sock.close()
 
 class MyListener(MGListener):
     """
@@ -315,6 +320,7 @@ class MyListener(MGListener):
         # Send delt_x and delt_y
         message = f'{delta_x},{delta_y}'
         XY_sock.sendto(message.encode(), server_address)
+        Pico_sock.sendto(message.encode(), pico_server_address)
 
 class MGMonitor(threading.Thread):
     """
