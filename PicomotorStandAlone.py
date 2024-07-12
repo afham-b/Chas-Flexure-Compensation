@@ -21,11 +21,45 @@ class MotorOperations:
         self.delt_x = 0
         self.delt_y = 0
 
+        # measure and modify the two parameters below for your magnification
+        # distance in mm
+        self.distance_lens_lightscourse = 118
+        self.distance_lens_ccd = 83
+        self.magnification = self.distance_lens_ccd/self.distance_lens_lightscourse
+
+        # pixel size (micrometer) can be found on camera specifications sheet
+        # for asi290mini pixel size is 2.9 microns, effective pixel size is ~ 4microns/pixel
+        self.camera_pixel_size = 2.9
+        self.effective_pixel_size = self.camera_pixel_size / self.magnification
+
+        # set scale factor for picomotor motion from camera feedback
+        self.motion_scale = 0.01
+        self.correction_scale = self.effective_pixel_size * self.motion_scale
+
+        # the pico motor moves 20 nm per step, adjust this value based on the mas the motor moves
+        self.step_size = 0.02
+
+    async def control_picomotors(self):
+        print('Control_picomotors output,' + str(self.delt_x) + ',' + str(self.delt_y))
+
+        # Convert these deltas into microns * some arbitrary correction scale
+        move_x = self.delt_y * self.correction_scale
+        move_y = self.delt_y * self.correction_scale
+
+        # Convert microns into steps, once picomotor step is 20 nm (default denominator is 0.02)
+        steps_x = move_x / self.step_size
+        steps_y = move_y / self.step_size
+
+        self.move_by_steps(steps_y)
+
+
     async def start_sock_data(self):
         while True:
             data, _ = pico_sock.recvfrom(4096)  # Buffer size
             self.delt_x, self.delt_y = map(float, data.decode().split(','))
             print('Socket data received: ' + str(self.delt_x) + str(self.delt_y))
+            asyncio.create_task(self.control_picomotors())
+            await asyncio.sleep(0.01)
             time.sleep(0.01)
 
     def set_velocity(self, speed, acceleration=10000):

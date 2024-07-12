@@ -38,18 +38,18 @@ from pylablib.devices import Newport
 
 # measure and modify the two parameters below for your magnification
 # distance in mm
-distance_lens_lightsource = 118
-distance_lens_ccd = 83
-magnification = distance_lens_ccd / distance_lens_lightsource
+#distance_lens_lightsource = 118
+#distance_lens_ccd = 83
+#magnification = distance_lens_ccd / distance_lens_lightsource
 
 #pixel size (micrometer) can be found on camera specifications sheet
 # for asi290mini pixel size is 2.9 microns, effective pixel size is ~ 4microns/pixel
-camera_pixel_size = 2.9
-effective_pixel_size = camera_pixel_size / magnification
+#camera_pixel_size = 2.9
+#effective_pixel_size = camera_pixel_size / magnification
 
 # set scale factor for picomotor motion from camera feedback
-motion_scale = 0.01
-correction_scale = effective_pixel_size * motion_scale
+#motion_scale = 0.01
+#correction_scale = effective_pixel_size * motion_scale
 
 def handle_client_connection(client_socket):
     while True:
@@ -151,15 +151,15 @@ async def main():
         print('Server output,' + str(delt_x) + ',' + str(delt_y))
 
         # Convert these deltas into microns * some arbitrary correction scale
-        move_x = delt_x * correction_scale
-        move_y = delt_y * correction_scale
+        #move_x = delt_x * correction_scale
+        #move_y = delt_y * correction_scale
 
         #the pico motor moves 20 nm per step, adjust this value based on the mas the motor moves
-        step_size = 0.02
+        #step_size = 0.02
 
         # Convert microns into steps, once picomotor step is 20 nm (default denominator is 0.02)
-        steps_x = move_x / step_size
-        steps_y = move_y / step_size
+        #steps_x = move_x / step_size
+        #steps_y = move_y / step_size
 
         # motor_y = PicomotorStandAlone.MotorOperations(controller, motor=1)
         # print(motor1_operations)
@@ -185,7 +185,7 @@ async def main():
             delt_x, delt_y = map(float, data.decode().split(','))
 
             # Process received data to control the picomotors
-            asyncio.create_task(control_picomotors(delt_x, delt_y))
+            #asyncio.create_task(control_picomotors(delt_x, delt_y))
             await asyncio.sleep(0.01)
 
     #asyncio.run(motor_y.start_sock_data())
@@ -194,7 +194,7 @@ async def main():
     async def starting():
         await asyncio.gather(
             motor_y.start_sock_data(),
-            receive_data()
+            # receive_data()
         )
 
     await starting()
