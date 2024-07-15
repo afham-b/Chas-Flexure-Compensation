@@ -40,7 +40,7 @@ class MotorOperations:
         self.step_size = 0.019
 
         # how close we want the picomotor to try to get to the home position
-        self.margin_of_error = 0.2
+        self.margin_of_error = 0.15
 
     async def control_picomotors(self):
         print('Control_picomotors output,' + str(self.delt_x) + ',' + str(self.delt_y))
@@ -54,8 +54,8 @@ class MotorOperations:
         steps_y = move_y / self.step_size
 
         #this only include y axis, needs other statement for x axis
-        if abs(self.delt_y) >= self.margin_of_error:
-            self.move_by_steps(steps_y)
+        if abs(self.delt_y) > self.margin_of_error:
+            await self.move_by_steps(steps_y)
         else:
             self.controller.stop(axis='all', immediate=True)
 
@@ -104,13 +104,13 @@ class MotorOperations:
             elapsed_time = time.time() - start_time
             if elapsed_time > timeout:
                 print("Move_by_Steps Timeout reached")
-                # await self.start_sock_data()
+                await self.start_sock_data()
                 self.controller = controller
                 break
-            time.sleep(0.05)
+            time.sleep(0.001)
 
         # await asyncio.sleep(0.001)  # Pause for n seconds
-        time.sleep(0.05)
+        time.sleep(0.001)
 
     async def set_position_reference(self, position=0):
         """
