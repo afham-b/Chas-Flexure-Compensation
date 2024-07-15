@@ -33,11 +33,14 @@ class MotorOperations:
         self.effective_pixel_size = self.camera_pixel_size / self.magnification
 
         # set scale factor for picomotor motion from camera feedback
-        self.motion_scale = 0.01
+        self.motion_scale = 0.1
         self.correction_scale = self.effective_pixel_size * self.motion_scale
 
         # the pico motor moves 20 nm per step, adjust this value based on the mas the motor moves
-        self.step_size = 0.02
+        self.step_size = 0.019
+
+        # how close we want the picomotor to try to get to the home position
+        self.margin_of_error = 0.2
 
     async def control_picomotors(self):
         print('Control_picomotors output,' + str(self.delt_x) + ',' + str(self.delt_y))
@@ -50,9 +53,11 @@ class MotorOperations:
         steps_x = move_x / self.step_size
         steps_y = move_y / self.step_size
 
-        #direction = "+" if self.delt_y > 0 else "-"
-
-        self.move_by_steps(steps_y)
+        #this only include y axis, needs other statement for x axis
+        if abs(self.delt_y) >= self.margin_of_error:
+            self.move_by_steps(steps_y)
+        else:
+            self.controller.stop(axis='all', immediate=True)
 
     async def start_sock_data(self):
         while True:
@@ -85,16 +90,27 @@ class MotorOperations:
         await asyncio.sleep(2)  # Pause for 2 seconds
 
     # async def move_by_steps(self, steps, stop_event=None):
-    def move_by_steps(self, steps, stop_event=None):
+    async def move_by_steps(self, steps, stop_event=None):
         """
         Move by a number of steps.
         """
         self.controller.move_by(self.motor, steps)
+
+        start_time = time.time()
+        timeout = 10  # Timeout in seconds
+
         while not (stop_event and stop_event.is_set()) and self.controller.is_moving(self.motor):
             # await asyncio.sleep(0.001)
-            time.sleep(0.001)
+            elapsed_time = time.time() - start_time
+            if elapsed_time > timeout:
+                print("Move_by_Steps Timeout reached")
+                # await self.start_sock_data()
+                self.controller = controller
+                break
+            time.sleep(0.05)
+
         # await asyncio.sleep(0.001)  # Pause for n seconds
-        time.sleep(0.001)
+        time.sleep(0.05)
 
     async def set_position_reference(self, position=0):
         """

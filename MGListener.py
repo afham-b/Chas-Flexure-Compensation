@@ -171,6 +171,9 @@ class MGListener(threading.Thread):
         tlastmsg = time.time()
         loop_tracker = 0
 
+        # attempt to give mg guide to find star and set x and y values
+        time.sleep(5)
+
         while self.listenMessages:
             try:
                 # non-blocking select with timeout so it doesn't get stuck
@@ -288,11 +291,9 @@ class MGListener(threading.Thread):
 
             # only get here if a good message was received and parsed
             # now invoke the user's function in a subclass
-            if loop_tracker == 0:
+            if loop_tracker == 0 and (self.x > 0 or self.y > 0):
                 self.firstxy()
-            elif loop_tracker == 25:
-                self.firstxy()
-            loop_tracker = loop_tracker + 1
+                loop_tracker = loop_tracker + 1
 
             self.doit()
 
