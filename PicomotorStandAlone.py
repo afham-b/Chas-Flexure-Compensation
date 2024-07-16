@@ -104,8 +104,9 @@ class MotorOperations:
             elapsed_time = time.time() - start_time
             if elapsed_time > timeout:
                 print("Move_by_Steps Timeout reached")
-                await self.start_sock_data()
+                self.controller.stop(axis='all', immediate=True)
                 self.controller = controller
+                await self.start_sock_data()
                 break
             time.sleep(0.001)
 
