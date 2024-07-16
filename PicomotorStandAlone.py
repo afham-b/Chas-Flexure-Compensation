@@ -43,7 +43,7 @@ class MotorOperations:
         self.margin_of_error = 0.15
 
     async def control_picomotors(self):
-        print('Control_picomotors output,' + str(self.delt_x) + ',' + str(self.delt_y))
+        print('Control_picomotors output,' + str(round(self.delt_x, 4)) + ' ,' + str(round(self.delt_y,4)))
 
         # Convert these deltas into microns * some arbitrary correction scale
         move_x = self.delt_y * self.correction_scale
@@ -97,7 +97,7 @@ class MotorOperations:
         self.controller.move_by(self.motor, steps)
 
         start_time = time.time()
-        timeout = 10  # Timeout in seconds
+        timeout = 4  # Timeout in n seconds
 
         while not (stop_event and stop_event.is_set()) and self.controller.is_moving(self.motor):
             # await asyncio.sleep(0.001)
@@ -292,8 +292,12 @@ if __name__ == "__main__":
 
         try:
             loop.run_until_complete(run(controller))
-        except asyncio.CancelledError:
+        except asyncio.CancelledError or KeyboardInterrupt:
             pass
         finally:
-            loop.close()
-            controller.close()
+            def end():
+                stop_motors(controller)
+                loop.close()
+                controller.close()
+            end()
+            print("done")
