@@ -316,8 +316,8 @@ class MyListener(MGListener):
         #print("Initial X, Y of the star are: ", self.x_init, self.y_init)
 
     def doit(self):
-        delta_x = round((self.x - self.x_init), 4)
-        delta_y = round((self.y - self.y_init), 4)
+        delta_x = self.x - self.x_init
+        delta_y = self.y - self.y_init
         #print("x:" + str(self.x) + " y: " + str(self.y) + " delt x: " + str(delta_x) + " delt y: " + str(delta_y))
         # print("%s : %s"%(self.msg, self.msgtxt))
 

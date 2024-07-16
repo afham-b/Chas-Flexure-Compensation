@@ -31,7 +31,7 @@ DecLashMinus 0.000000
 DecReverse 0.000000
 NSReversed 0
 GuideX 0
-GuideY 957
+GuideY 956
 AdvancedView 1
 PromptLogComment 1
 OutputDir C:\Users\afham\Documents\MetaGuide

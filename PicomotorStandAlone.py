@@ -97,15 +97,16 @@ class MotorOperations:
         self.controller.move_by(self.motor, steps)
 
         start_time = time.time()
-        timeout = 10  # Timeout in seconds
+        timeout = 5  # Timeout in seconds
 
         while not (stop_event and stop_event.is_set()) and self.controller.is_moving(self.motor):
             # await asyncio.sleep(0.001)
             elapsed_time = time.time() - start_time
             if elapsed_time > timeout:
                 print("Move_by_Steps Timeout reached")
-                await self.start_sock_data()
+                self.controller.stop(axis='all', immediate=True)
                 self.controller = controller
+                await self.start_sock_data()
                 break
             time.sleep(0.001)
 
@@ -291,8 +292,12 @@ if __name__ == "__main__":
 
         try:
             loop.run_until_complete(run(controller))
-        except asyncio.CancelledError:
+        except asyncio.CancelledError or KeyboardInterrupt:
             pass
         finally:
-            loop.close()
-            controller.close()
+            def end():
+                stop_motors(controller)
+                loop.close()
+                controller.close()
+            end()
+            print("done")

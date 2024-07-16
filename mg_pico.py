@@ -107,7 +107,7 @@ async def main():
 
     # We're starting with a saved MetaGuide setup file: test1
     # remember to change to your own path!
-    scope_setup_path = r'C:\Users\afham\Documents\MetaGuide\test1.mg'
+    scope_setup_path = r'C:\Users\linz\Documents\GitHub\Picomotor-Controls-1\test1.mg'
     os.startfile(scope_setup_path)
     time.sleep(3)
 
@@ -256,5 +256,13 @@ async def main():
         main()"""
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass
+    finally:
+        PicomotorStandAlone.end()
+        print("done")
+
+
 
