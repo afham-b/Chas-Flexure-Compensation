@@ -13,6 +13,7 @@ pico_sock.bind(server_address)
 class MotorOperations:
     def __init__(self, controller, motor, default_speed=1750, close_speed=800, very_close_speed=40):
         self.controller = controller
+        self.address = self.controller.get_addr()
         self.motor = motor
         self.default_speed = default_speed
         self.close_speed = close_speed
@@ -33,31 +34,55 @@ class MotorOperations:
         self.effective_pixel_size = self.camera_pixel_size / self.magnification
 
         # set scale factor for picomotor motion from camera feedback
-        self.motion_scale = 0.1
+        self.motion_scale = 0.5
         self.correction_scale = self.effective_pixel_size * self.motion_scale
 
         # the pico motor moves 20 nm per step, adjust this value based on the mas the motor moves
         self.step_size = 0.019
 
         # how close we want the picomotor to try to get to the home position
-        self.margin_of_error = 0.15
+        self.margin_of_error = 0.2
 
     async def control_picomotors(self):
-        print('Control_picomotors output,' + str(self.delt_x) + ',' + str(self.delt_y))
+        print('Control_picomotors output,' + str(round(self.delt_x, 4)) + ' ,' + str(round(self.delt_y, 4)))
 
         # Convert these deltas into microns * some arbitrary correction scale
-        move_x = self.delt_y * self.correction_scale
+        move_x = self.delt_x * self.correction_scale
         move_y = self.delt_y * self.correction_scale
 
         # Convert microns into steps, once picomotor step is 20 nm (default denominator is 0.02)
         steps_x = move_x / self.step_size
         steps_y = move_y / self.step_size
 
-        #this only include y axis, needs other statement for x axis
+        # invert steps for inverted x axis of correction
+        invert = -1
+        steps_x = steps_x * invert
+
+        self.motor = 1
+        # this only include y axis, needs other statement for x axis
         if abs(self.delt_y) > self.margin_of_error:
+            #print('motor number is' + str(self.motor))
             await self.move_by_steps(steps_y)
+            pass
+        else:
+            #self.controller.stop(axis='all', immediate=True, addr=self.address)
+            self.controller.stop(axis='all', immediate=True)
+            await asyncio.sleep(0.01)
+
+        asyncio.sleep(0.01)
+            
+        self.motor = 2
+        if abs(self.delt_x) > self.margin_of_error:
+            print('delta x moving')
+            # switch to motor 2 to move the x-axis since self by default is y
+            print('motor number is' + str(self.motor))
+            steps_x = steps_x
+            print("steps x: " + str(steps_x))
+            await self.move_by_steps(steps_x)
         else:
             self.controller.stop(axis='all', immediate=True)
+            await asyncio.sleep(0.01)
+        # switch back to motor 1 default
 
     async def start_sock_data(self):
         while True:
@@ -97,17 +122,23 @@ class MotorOperations:
         self.controller.move_by(self.motor, steps)
 
         start_time = time.time()
-        timeout = 5  # Timeout in seconds
+        timeout = 5  # Timeout in n seconds
 
-        while not (stop_event and stop_event.is_set()) and self.controller.is_moving(self.motor):
+        moving = True
+
+        while not (stop_event and stop_event.is_set()) and moving:
             # await asyncio.sleep(0.001)
             elapsed_time = time.time() - start_time
+            moving = self.controller.is_moving(self.motor)
             if elapsed_time > timeout:
                 print("Move_by_Steps Timeout reached")
+                #self.controller.stop(axis='all', immediate=True, addr=self.address)
                 self.controller.stop(axis='all', immediate=True)
+                moving = False
                 self.controller = controller
                 await self.start_sock_data()
                 break
+
             time.sleep(0.001)
 
         # await asyncio.sleep(0.001)  # Pause for n seconds
@@ -150,7 +181,7 @@ class MotorOperations:
         print("Position: Home (0.00mm)")
 
     async def jog_until(self, laser, target_distance, margin=0.1, stop_event=None):
-        address = self.controller.get_addr()
+        address = self.address
         current_distance = laser.measure(verbose=True)
         if current_distance is None:
             print("Initial laser measurement failed. Aborting.")
@@ -194,7 +225,7 @@ class MotorOperations:
         self.controller.stop(axis='all', immediate=True)
 
     async def joggin(self, target_distance=0, margin=0.1, stop_event=None):
-        address = self.controller.get_addr()
+        address = self.address
 
         if self.delt_y is None:
             print("Initial laser measurement failed. Aborting.")
