@@ -12,6 +12,8 @@ import asyncio
 import pyuac
 import ctypes
 
+from PortCleanUp import SocketCleaner
+
 # this is from MGListener.py file, which must be in the same directory as mg_track
 # MGListener.py is located in program files x86 \ MetaGuide folder by default
 from MGListener import MyListener, MGListener, MGMonitor
@@ -183,26 +185,6 @@ async def main():
         # These deltas are in pixels
         print('Server output,' + str(delt_x) + ',' + str(delt_y))
 
-        # Convert these deltas into microns * some arbitrary correction scale
-        #move_x = delt_x * correction_scale
-        #move_y = delt_y * correction_scale
-
-        #the pico motor moves 20 nm per step, adjust this value based on the mas the motor moves
-        #step_size = 0.02
-
-        # Convert microns into steps, once picomotor step is 20 nm (default denominator is 0.02)
-        #steps_x = move_x / step_size
-        #steps_y = move_y / step_size
-
-        # motor_y = PicomotorStandAlone.MotorOperations(controller, motor=1)
-        # print(motor1_operations)
-        # await motor_y.joggin()
-        # motor_y.move_by_steps(steps_x)
-
-        # sock_data_task = asyncio.create_task(motor_y.start_sock_data())
-        # joggin_task = asyncio.create_task(motor_y.joggin())
-        # await asyncio.gather(sock_data_task, joggin_task)
-
     async def receive_data():
         # Set up UDP socket to listen
         XY_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -244,10 +226,18 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
+        #kill processes via PIDs
         mgpid = get_pid('MetaGuide.exe')
         ascompid = get_pid('ASCOM.TelescopeSimulator.exe')
         pids_to_kill = [mgpid, ascompid]
         kill_processes(pids_to_kill)
+        print("Processes Killed")
+
+        # clean ports
+        cleaner = SocketCleaner()
+        cleaner.cleanup()
+
         # end_threads()
-        print("Done!")
-        # finally: clean ports
+
+        # revert to terminal
+        sys.exit(0)
