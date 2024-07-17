@@ -34,7 +34,7 @@ class MotorOperations:
         self.effective_pixel_size = self.camera_pixel_size / self.magnification
 
         # set scale factor for picomotor motion from camera feedback
-        self.motion_scale = 0.3
+        self.motion_scale = 0.5
         self.correction_scale = self.effective_pixel_size * self.motion_scale
 
         # the pico motor moves 20 nm per step, adjust this value based on the mas the motor moves
@@ -63,10 +63,13 @@ class MotorOperations:
         if abs(self.delt_y) > self.margin_of_error:
             #print('motor number is' + str(self.motor))
             await self.move_by_steps(steps_y)
+            pass
         else:
             #self.controller.stop(axis='all', immediate=True, addr=self.address)
             self.controller.stop(axis='all', immediate=True)
             await asyncio.sleep(0.01)
+
+        asyncio.sleep(0.01)
             
         self.motor = 2
         if abs(self.delt_x) > self.margin_of_error:
@@ -75,9 +78,10 @@ class MotorOperations:
             print('motor number is' + str(self.motor))
             steps_x = steps_x
             print("steps x: " + str(steps_x))
-        #    await self.move_by_steps(steps_x)
+            await self.move_by_steps(steps_x)
         else:
             self.controller.stop(axis='all', immediate=True)
+            await asyncio.sleep(0.01)
         # switch back to motor 1 default
 
     async def start_sock_data(self):
