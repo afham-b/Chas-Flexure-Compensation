@@ -1,6 +1,3 @@
-# import win32api
-# import win32con
-# from pywinauto import Application
 import os
 import time
 import threading
@@ -11,9 +8,9 @@ import select
 import math
 import psutil
 import signal
+import asyncio
 import pyuac
 import ctypes
-import asyncio
 
 # this is from MGListener.py file, which must be in the same directory as mg_track
 # MGListener.py is located in program files x86 \ MetaGuide folder by default
@@ -51,6 +48,7 @@ from pylablib.devices import Newport
 #motion_scale = 0.01
 #correction_scale = effective_pixel_size * motion_scale
 
+
 def handle_client_connection(client_socket):
     while True:
         data = client_socket.recv(1024)
@@ -74,6 +72,42 @@ def start_server():
             args=(client_sock,)
         )
         client_handler.start()
+
+# Shut down MetaGuide and ASCOM using PIDs and signal (SIGTERM)
+def kill_processes(pids, sig=signal.SIGTERM):
+    def get_program_name(pid):
+        try:
+            process = psutil.Process(pid)
+            return process.name()
+        except psutil.NoSuchProcess:
+            print(f"No process found with PID {pid}.")
+            return None
+
+    for pid in pids:
+        try:
+            os.kill(pid, sig)
+            print(f"Process with PID {pid} terminated: "+get_program_name(pid))
+        except OSError as e:
+            print(f"Error {e} terminating process {pid}: "+get_program_name(pid))
+
+
+def get_pid(process_name):
+    for proc in psutil.process_iter(['pid', 'name']):
+        if proc.info['name'] == process_name:
+            return proc.info['pid']
+    return None
+
+
+# need to end threads to end program!
+"""def end_threads():
+    print("Now stopping threads")
+    # Stop listener
+    if listener.is_alive():
+        listener.stop()
+        listener.join()
+    # Stop monitor
+    if monitor.is_alive():
+        monitor.join()"""
 
 
 async def main():
@@ -116,7 +150,6 @@ async def main():
     # os.startfile(monitor_path)
     # time.sleep(5)
 
-
     # Start the listener and monitor threads
     listener = MyListener()
     listener.start()
@@ -127,7 +160,7 @@ async def main():
             # Print the initial x and y coordinates
             # x, y, intens = listener.getXYI()
             # print(f"Initial coordinates: x={x}, y={y}, intensity={intens}")
-        time.sleep(0.1)
+            time.sleep(0.1)
 
     # Monitor stuff
     # in MetaGuide, open setup button (bottom bar)-> extra tab -> make sure Broadcast is checked
@@ -143,8 +176,8 @@ async def main():
     while not monitor.is_alive():
         if monitor.is_alive():
             print('Monitor Live!')
-            # monitor.dumpState()
         time.sleep(0.1)
+
 
     async def control_picomotors(delt_x, delt_y):
         # These deltas are in pixels
@@ -199,54 +232,6 @@ async def main():
 
     await starting()
 
-    # Shut down MetaGuide using PIDs and signal
-    def kill_processes(pids, sig=signal.SIGTERM):
-        """
-        Kill multiple processes given their PIDs using a signal (default: SIGTERM).
-        """
-        def get_program_name(pid):
-            try:
-                process = psutil.Process(pid)
-                return process.name()
-            except psutil.NoSuchProcess:
-                print(f"No process found with PID {pid}.")
-                return None
-
-        for pid in pids:
-            try:
-                os.kill(pid, sig)
-                print(f"Process with PID {pid} terminated: "+get_program_name(pid))
-            except OSError as e:
-                print(f"Error terminating process "+get_program_name(pid)+"with PID {pid}: {e} ")
-
-    def get_pid(process_name):
-        for proc in psutil.process_iter(['pid', 'name']):
-            if proc.info['name'] == process_name:
-                return proc.info['pid']
-        return None
-
-    mgpid = get_pid('MetaGuide.exe')
-    ascompid = get_pid('ASCOM.TelescopeSimulator.exe')
-
-    input("Enter to close: ")
-    pids_to_kill = [mgpid, ascompid]
-    kill_processes(pids_to_kill)
-
-    print("Now stopping threads")
-
-    # need to end threads to end program!
-    def end_threads():
-        # Stop listener
-        if listener.is_alive():
-            listener.stop()
-            listener.join()
-        # Stop monitor
-        if monitor.is_alive():
-            monitor.join()
-
-    end_threads()
-    print("Done!")
-
 
 # If you're using run_as_admin
 """if __name__ == "__main__":
@@ -256,12 +241,13 @@ async def main():
         main()"""
 
 if __name__ == "__main__":
-    asyncio.run(main())
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        pass
-    finally:
-        PicomotorStandAlone.end()
-        print("done")
-
+        mgpid = get_pid('MetaGuide.exe')
+        ascompid = get_pid('ASCOM.TelescopeSimulator.exe')
+        pids_to_kill = [mgpid, ascompid]
+        kill_processes(pids_to_kill)
+        # end_threads()
+        print("Done!")
+        # finally: clean ports

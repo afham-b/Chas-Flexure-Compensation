@@ -41,7 +41,7 @@ class MotorOperations:
         self.step_size = 0.019
 
         # how close we want the picomotor to try to get to the home position
-        self.margin_of_error = 0.2
+        self.margin_of_error = 1
 
     async def control_picomotors(self):
         print('Control_picomotors output,' + str(round(self.delt_x, 4)) + ' ,' + str(round(self.delt_y, 4)))
@@ -122,7 +122,7 @@ class MotorOperations:
         self.controller.move_by(self.motor, steps)
 
         start_time = time.time()
-        timeout = 5  # Timeout in n seconds
+        timeout = 2  # Timeout in n seconds
 
         moving = True
 
