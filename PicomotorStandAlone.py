@@ -58,6 +58,7 @@ class MotorOperations:
         invert = -1
         steps_x = steps_x * invert
 
+        self.motor = 1
         # this only include y axis, needs other statement for x axis
         if abs(self.delt_y) > self.margin_of_error:
             #print('motor number is' + str(self.motor))
@@ -67,20 +68,17 @@ class MotorOperations:
             self.controller.stop(axis='all', immediate=True)
             await asyncio.sleep(0.01)
             
-        #self.motor = 2
-        #if abs(self.delt_x) > self.margin_of_error:
-            #print('delta x moving')
+        self.motor = 2
+        if abs(self.delt_x) > self.margin_of_error:
+            print('delta x moving')
             # switch to motor 2 to move the x-axis since self by default is y
-        #    print('motor number is' + str(self.motor))
-        #    steps_x = steps_x
-            #print("steps x: " + str(steps_x))
+            print('motor number is' + str(self.motor))
+            steps_x = steps_x
+            print("steps x: " + str(steps_x))
         #    await self.move_by_steps(steps_x)
-        #    await asyncio.sleep(0.1)
-        #else:
-        #    self.controller.stop(axis='all', immediate=True, addr=self.address)
-             #self.controller.stop(axis='all', immediate=True)
+        else:
+            self.controller.stop(axis='all', immediate=True)
         # switch back to motor 1 default
-        # self.motor = 1
 
     async def start_sock_data(self):
         while True:
