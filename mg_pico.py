@@ -1,6 +1,3 @@
-# import win32api
-# import win32con
-# from pywinauto import Application
 import os
 import time
 import threading
@@ -11,9 +8,11 @@ import select
 import math
 import psutil
 import signal
+import asyncio
 import pyuac
 import ctypes
-import asyncio
+
+from PortCleanUp import SocketCleaner
 
 # this is from MGListener.py file, which must be in the same directory as mg_track
 # MGListener.py is located in program files x86 \ MetaGuide folder by default
@@ -51,6 +50,7 @@ from pylablib.devices import Newport
 #motion_scale = 0.01
 #correction_scale = effective_pixel_size * motion_scale
 
+
 def handle_client_connection(client_socket):
     while True:
         data = client_socket.recv(1024)
@@ -74,6 +74,42 @@ def start_server():
             args=(client_sock,)
         )
         client_handler.start()
+
+# Shut down MetaGuide and ASCOM using PIDs and signal (SIGTERM)
+def kill_processes(pids, sig=signal.SIGTERM):
+    def get_program_name(pid):
+        try:
+            process = psutil.Process(pid)
+            return process.name()
+        except psutil.NoSuchProcess:
+            print(f"No process found with PID {pid}.")
+            return None
+
+    for pid in pids:
+        try:
+            os.kill(pid, sig)
+            print(f"Process with PID {pid} terminated: "+get_program_name(pid))
+        except OSError as e:
+            print(f"Error {e} terminating process {pid}: "+get_program_name(pid))
+
+
+def get_pid(process_name):
+    for proc in psutil.process_iter(['pid', 'name']):
+        if proc.info['name'] == process_name:
+            return proc.info['pid']
+    return None
+
+
+# need to end threads to end program!
+"""def end_threads():
+    print("Now stopping threads")
+    # Stop listener
+    if listener.is_alive():
+        listener.stop()
+        listener.join()
+    # Stop monitor
+    if monitor.is_alive():
+        monitor.join()"""
 
 
 async def main():
@@ -107,7 +143,7 @@ async def main():
 
     # We're starting with a saved MetaGuide setup file: test1
     # remember to change to your own path!
-    scope_setup_path = r'C:\Users\linz\Documents\GitHub\Picomotor-Controls-1\test1.mg'
+    scope_setup_path = r'C:\Users\afham\Documents\MetaGuide\test1.mg'
     os.startfile(scope_setup_path)
     time.sleep(3)
 
@@ -115,7 +151,6 @@ async def main():
     # monitor_path = r'C:\Program Files (x86)\MetaGuide\MetaMonitor.exe'
     # os.startfile(monitor_path)
     # time.sleep(5)
-
 
     # Start the listener and monitor threads
     listener = MyListener()
@@ -127,7 +162,7 @@ async def main():
             # Print the initial x and y coordinates
             # x, y, intens = listener.getXYI()
             # print(f"Initial coordinates: x={x}, y={y}, intensity={intens}")
-        time.sleep(0.1)
+            time.sleep(0.1)
 
     # Monitor stuff
     # in MetaGuide, open setup button (bottom bar)-> extra tab -> make sure Broadcast is checked
@@ -143,32 +178,12 @@ async def main():
     while not monitor.is_alive():
         if monitor.is_alive():
             print('Monitor Live!')
-            # monitor.dumpState()
         time.sleep(0.1)
+
 
     async def control_picomotors(delt_x, delt_y):
         # These deltas are in pixels
         print('Server output,' + str(delt_x) + ',' + str(delt_y))
-
-        # Convert these deltas into microns * some arbitrary correction scale
-        #move_x = delt_x * correction_scale
-        #move_y = delt_y * correction_scale
-
-        #the pico motor moves 20 nm per step, adjust this value based on the mas the motor moves
-        #step_size = 0.02
-
-        # Convert microns into steps, once picomotor step is 20 nm (default denominator is 0.02)
-        #steps_x = move_x / step_size
-        #steps_y = move_y / step_size
-
-        # motor_y = PicomotorStandAlone.MotorOperations(controller, motor=1)
-        # print(motor1_operations)
-        # await motor_y.joggin()
-        # motor_y.move_by_steps(steps_x)
-
-        # sock_data_task = asyncio.create_task(motor_y.start_sock_data())
-        # joggin_task = asyncio.create_task(motor_y.joggin())
-        # await asyncio.gather(sock_data_task, joggin_task)
 
     async def receive_data():
         # Set up UDP socket to listen
@@ -199,54 +214,6 @@ async def main():
 
     await starting()
 
-    # Shut down MetaGuide using PIDs and signal
-    def kill_processes(pids, sig=signal.SIGTERM):
-        """
-        Kill multiple processes given their PIDs using a signal (default: SIGTERM).
-        """
-        def get_program_name(pid):
-            try:
-                process = psutil.Process(pid)
-                return process.name()
-            except psutil.NoSuchProcess:
-                print(f"No process found with PID {pid}.")
-                return None
-
-        for pid in pids:
-            try:
-                os.kill(pid, sig)
-                print(f"Process with PID {pid} terminated: "+get_program_name(pid))
-            except OSError as e:
-                print(f"Error terminating process "+get_program_name(pid)+"with PID {pid}: {e} ")
-
-    def get_pid(process_name):
-        for proc in psutil.process_iter(['pid', 'name']):
-            if proc.info['name'] == process_name:
-                return proc.info['pid']
-        return None
-
-    mgpid = get_pid('MetaGuide.exe')
-    ascompid = get_pid('ASCOM.TelescopeSimulator.exe')
-
-    input("Enter to close: ")
-    pids_to_kill = [mgpid, ascompid]
-    kill_processes(pids_to_kill)
-
-    print("Now stopping threads")
-
-    # need to end threads to end program!
-    def end_threads():
-        # Stop listener
-        if listener.is_alive():
-            listener.stop()
-            listener.join()
-        # Stop monitor
-        if monitor.is_alive():
-            monitor.join()
-
-    end_threads()
-    print("Done!")
-
 
 # If you're using run_as_admin
 """if __name__ == "__main__":
@@ -259,10 +226,18 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        pass
-    finally:
-        PicomotorStandAlone.end()
-        print("done")
+        #kill processes via PIDs
+        mgpid = get_pid('MetaGuide.exe')
+        ascompid = get_pid('ASCOM.TelescopeSimulator.exe')
+        pids_to_kill = [mgpid, ascompid]
+        kill_processes(pids_to_kill)
+        print("Processes Killed")
 
+        # clean ports
+        cleaner = SocketCleaner()
+        cleaner.cleanup()
 
+        # end_threads()
 
+        # revert to terminal
+        sys.exit(0)
