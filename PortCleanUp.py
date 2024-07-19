@@ -6,6 +6,8 @@ class SocketCleaner:
 
     def cleanup(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        port_number = self.server_address[1]
+        print(f"Closing socket bound to port {port_number}")
         try:
             sock.bind(self.server_address)
             print("Socket closed")
@@ -13,6 +15,7 @@ class SocketCleaner:
             print(f"Socket bind failed: {e}")
         finally:
             sock.close()
+
 
 if __name__ == "__main__":
     cleaner = SocketCleaner()

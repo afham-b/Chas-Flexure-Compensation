@@ -10,12 +10,12 @@ from pylablib.devices import Newport
 # make sure the PicomotorStandAlone.py and mg_pico.py file is in the same directory as this file
 
 import socket
-# udp socket thread to send over x and y values to mg_pico, leave as global vars pls
+# UDP socket thread to send over x and y values to mg_pico, leave as global vars pls
 XY_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # set a port above 5000 and 127.0.0.1 refers to local host
 server_address = ('127.0.0.1', 5001)  # Adjust address and port as needed
 
-# second socket to serve to Picomotor Standalone
+# second socket to serve to Picomotor StandAlone
 Pico_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 pico_server_address = ('127.0.0.1', 5002)
 
@@ -33,7 +33,6 @@ if sys.version_info < (3, 0):
 class MGListener(threading.Thread):
     """
     Listens to data messages from MetaGuide broadcast over UDP.
-
     Runs in separate thread and synchronizes with threadLock
     Default port is 1277 to match default in MetaGuide->Setup->Extra dialog
     """
@@ -134,7 +133,7 @@ class MGListener(threading.Thread):
     #    pass
 
     def isDead(self):
-        #print("MG is not responding")
+        print("MG is not responding")
         pass
 
     def timeSinceLastMsg(self):
@@ -316,14 +315,10 @@ class MyListener(MGListener):
         #print("Initial X, Y of the star are: ", self.x_init, self.y_init)
 
     def doit(self):
-        # delta_x = round((self.x - self.x_init), 4)
-        # delta_y = round((self.y - self.y_init), 4)
-
         delta_x = self.x - self.x_init
         delta_y = self.y - self.y_init
-
         #print("x:" + str(self.x) + " y: " + str(self.y) + " delt x: " + str(delta_x) + " delt y: " + str(delta_y))
-        # print("%s : %s"%(self.msg, self.msgtxt))
+        #print("%s : %s"%(self.msg, self.msgtxt))
 
         # Send delt_x and delt_y
         message = f'{delta_x},{delta_y}'

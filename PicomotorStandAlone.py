@@ -44,7 +44,7 @@ class MotorOperations:
         self.margin_of_error = 1
 
     async def control_picomotors(self):
-        print('Control_picomotors output,' + str(round(self.delt_x, 4)) + ' ,' + str(round(self.delt_y, 4)))
+        print('control_picomotors output (x,y): ' + str(round(self.delt_x, 4)) + ', ' + str(round(self.delt_y, 4)))
 
         # Convert these deltas into microns * some arbitrary correction scale
         move_x = self.delt_x * self.correction_scale
@@ -54,14 +54,15 @@ class MotorOperations:
         steps_x = move_x / self.step_size
         steps_y = move_y / self.step_size
 
-        # invert steps for inverted x axis of correction
+        # direction: invert steps for inverted x axis of correction
         invert = -1
         steps_x = steps_x * invert
 
         self.motor = 1
-        # this only include y axis, needs other statement for x axis
+        # this only include y axis
         if abs(self.delt_y) > self.margin_of_error:
-            #print('motor number is' + str(self.motor))
+            #print('delta y moving')
+            #print('motor number is ' + str(self.motor))
             await self.move_by_steps(steps_y)
             pass
         else:
@@ -72,10 +73,11 @@ class MotorOperations:
         asyncio.sleep(0.01)
             
         self.motor = 2
+        # x axis motor
         if abs(self.delt_x) > self.margin_of_error:
             print('delta x moving')
             # switch to motor 2 to move the x-axis since self by default is y
-            print('motor number is' + str(self.motor))
+            print('motor number is ' + str(self.motor))
             steps_x = steps_x
             print("steps x: " + str(steps_x))
             await self.move_by_steps(steps_x)
@@ -145,9 +147,7 @@ class MotorOperations:
         time.sleep(0.001)
 
     async def set_position_reference(self, position=0):
-        """
-        Set the current position as the reference position.
-        """
+        # Set the current position as the reference position
         self.controller.set_position_reference(self.motor, position)
         await asyncio.sleep(3)  # Small delay to ensure the command is processed
 

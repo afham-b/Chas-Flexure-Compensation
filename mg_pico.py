@@ -12,20 +12,19 @@ import asyncio
 import pyuac
 import ctypes
 
+# to clean ports
 from PortCleanUp import SocketCleaner
 
-# this is from MGListener.py file, which must be in the same directory as mg_track
-# MGListener.py is located in program files x86 \ MetaGuide folder by default
+# MGListener.py must be in the same directory as mg_track.py
+# By default, MGListener.py is located in program files x86 \ MetaGuide folder
 from MGListener import MyListener, MGListener, MGMonitor
 
-# make sure the PicomotorStandAlone.py file is in the same directory as this file
+# PicomotorStandAlone.py must be in the same directory as this file
 import PicomotorStandAlone
 from pylablib.devices import Newport
 
-# Run CMD as administrator to eliminate popups. If not running as admin, use run_as_admin()
-# see below for main()
-# however the popup still shows up...
-"""def run_as_admin():
+# If popups appear: run CMD as admin OR use run_as_admin() OR use run_as_admin.bat
+"""def run_as_admin(): # see below for main()
     if sys.platform == 'win32':
         try:
             # Elevate script's privileges using ShellExecuteW
@@ -33,15 +32,13 @@ from pylablib.devices import Newport
         except Exception as e:
             print(f"Failed to run as administrator: {e}")
             """
-# alternative: use run_as_admin.bat
 
-# measure and modify the two parameters below for your magnification
-# distance in mm
+# Parameters: measure and modify for your magnification (distance in mm):
 #distance_lens_lightsource = 118
 #distance_lens_ccd = 83
 #magnification = distance_lens_ccd / distance_lens_lightsource
 
-#pixel size (micrometer) can be found on camera specifications sheet
+#pixel size (micrometers) can be found on camera specs sheet
 # for asi290mini pixel size is 2.9 microns, effective pixel size is ~ 4microns/pixel
 #camera_pixel_size = 2.9
 #effective_pixel_size = camera_pixel_size / magnification
@@ -75,7 +72,7 @@ def start_server():
         )
         client_handler.start()
 
-# Shut down MetaGuide and ASCOM using PIDs and signal (SIGTERM)
+# Shut down MetaGuide and ASCOM using PIDs and signal
 def kill_processes(pids, sig=signal.SIGTERM):
     def get_program_name(pid):
         try:
@@ -84,13 +81,13 @@ def kill_processes(pids, sig=signal.SIGTERM):
         except psutil.NoSuchProcess:
             print(f"No process found with PID {pid}.")
             return None
-
     for pid in pids:
         try:
             os.kill(pid, sig)
             print(f"Process with PID {pid} terminated: "+get_program_name(pid))
         except OSError as e:
             print(f"Error {e} terminating process {pid}: "+get_program_name(pid))
+    print("Processes killed")
 
 
 def get_pid(process_name):
@@ -100,40 +97,37 @@ def get_pid(process_name):
     return None
 
 
-# need to end threads to end program!
-"""def end_threads():
-    print("Now stopping threads")
-    # Stop listener
+# Need to end threads to end program!
+def end_threads():
+    print("Stopping threads:")
     if listener.is_alive():
         listener.stop()
         listener.join()
-    # Stop monitor
+        print("Listener stopped")
+    else:
+        print("Listener is not running")
     if monitor.is_alive():
-        monitor.join()"""
+        monitor.join()
+        print("Monitor stopped")
+    else:
+        print("Monitor is not running")
 
 
 async def main():
-    # can start MetaGuide via the plain.exe
-    # app = Application().start(r"C:\Program Files (x86)\MetaGuide\MetaGuide.exe")
-    # time.sleep(10)  # Wait for MetaGuide to open
+    global listener, monitor
 
-    # can also start MetaGuide this way:
-    # idguide = win32api.RegisterWindowMessage("MG_RemoteGuide")
-    # win32api.PostMessage(win32con.HWND_BROADCAST, idguide, 0, 0)
-
-    # code below starts picomotor controller 8742 communication
+    # Start picomotor controller 8742 communication
     n = Newport.get_usb_devices_number_picomotor()
     if n == 0:
         print("No Picomotor devices found.")
         return
-
     if n > 0:
-        print('ControllerFound')
+        print('Controller found')
     try:
         controller = Newport.Picomotor8742()
         print(controller)
         motor_y = PicomotorStandAlone.MotorOperations(controller, motor=1)
-        # for testing to see motors move:
+        # test to see if motors move:
         # motor_x = PicomotorStandAlone.MotorOperations(controller, motor=2)
         # motor_y.move_by_steps(1000, stop_event=None)
         # motor_x.move_by_steps(1000, stop_event=None)
@@ -141,37 +135,42 @@ async def main():
         print(f"Error connecting to the Picomotor controller: {e}")
         return
 
-    # We're starting with a saved MetaGuide setup file: test1
+    # Options for starting MetaGuide:
+    # can start via the plain.exe or win32api. plain.exe location shown below
+    # app = Application().start(r"C:\Program Files (x86)\MetaGuide\MetaGuide.exe")
+    # time.sleep(10)  # Wait for MetaGuide to open
+
+    # We start with a saved MetaGuide setup file: test1.mg
     # remember to change to your own path!
-    scope_setup_path = r'C:\Users\afham\Documents\MetaGuide\test1.mg'
+    scope_setup_path = r'C:\Users\linz\Documents\GitHub\Picomotor-Controls-1\test1.mg'
     os.startfile(scope_setup_path)
     time.sleep(3)
 
-    # if you want to see monitoring graphs, not necessary for code, just optional
+    # To see monitoring graphs:
     # monitor_path = r'C:\Program Files (x86)\MetaGuide\MetaMonitor.exe'
     # os.startfile(monitor_path)
     # time.sleep(5)
 
-    # Start the listener and monitor threads
+    # Start Listener and Monitor threads
     listener = MyListener()
     listener.start()
-    # Wait for the listener to receive the first message
+    # Wait for Listener to receive the first message
     while not listener.isAlive():
         if listener.isAlive():
             print('Listener Live!')
-            # Print the initial x and y coordinates
+            # Print initial x and y coordinates
             # x, y, intens = listener.getXYI()
             # print(f"Initial coordinates: x={x}, y={y}, intensity={intens}")
             time.sleep(0.1)
 
-    # Monitor stuff
-    # in MetaGuide, open setup button (bottom bar)-> extra tab -> make sure Broadcast is checked
-    # look at extra settings for port or ip settings, otherwise monitor may not work
-    # you need to take your current connected router's ipv4 address and its subnet mask to calculate the broadcast mask
+    # Monitor:
+    # in MetaGuide, setup button -> extra -> make sure Broadcast is checked
+    # look at extra settings for port or IP settings
+    # find your current connected router's ipv4 address and its subnet mask to calculate the broadcast mask
     # for the current router in Lab the broadcast is 10.206.255.255, it varies per router per device
 
-    # you can use windows test loopback adapter for local network and bypasses need for router, use cmd ipconfig/all
-    # to find ipv4 and subnet mask for the test loopback adapter once you've installed it from device manager.
+    # Use windows test loopback adapter for local network to bypass need for router. Use CMD ipconfig/all
+    # to find ipv4 and subnet mask for the test loopback adapter once you've installed it from Device Manager.
 
     monitor = MGMonitor(listener)
     monitor.start()
@@ -179,7 +178,6 @@ async def main():
         if monitor.is_alive():
             print('Monitor Live!')
         time.sleep(0.1)
-
 
     async def control_picomotors(delt_x, delt_y):
         # These deltas are in pixels
@@ -199,7 +197,7 @@ async def main():
             data, _ = XY_sock.recvfrom(4096)  # Buffer size
             delt_x, delt_y = map(float, data.decode().split(','))
 
-            # Process received data to control the picomotors
+            # Process received data to control picomotors
             #asyncio.create_task(control_picomotors(delt_x, delt_y))
             await asyncio.sleep(0.01)
 
@@ -215,7 +213,7 @@ async def main():
     await starting()
 
 
-# If you're using run_as_admin
+# If using run_as_admin:
 """if __name__ == "__main__":
     if ctypes.windll.shell32.IsUserAnAdmin() == 0:
         run_as_admin()
@@ -226,18 +224,16 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        #kill processes via PIDs
+        print("Ending:")
+        # kill processes via PIDs
         mgpid = get_pid('MetaGuide.exe')
-        ascompid = get_pid('ASCOM.TelescopeSimulator.exe')
-        pids_to_kill = [mgpid, ascompid]
+        apid = get_pid('ASCOM.TelescopeSimulator.exe')
+        pids_to_kill = [mgpid, apid]
         kill_processes(pids_to_kill)
-        print("Processes Killed")
-
         # clean ports
         cleaner = SocketCleaner()
         cleaner.cleanup()
-
-        # end_threads()
-
-        # revert to terminal
+        # end Listener, Monitor threads
+        end_threads()
+        print("Done!")
         sys.exit(0)
