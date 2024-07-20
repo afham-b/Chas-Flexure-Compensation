@@ -142,7 +142,8 @@ async def main():
 
     # We start with a saved MetaGuide setup file: test1.mg
     # remember to change to your own path!
-    scope_setup_path = r'C:\Users\linz\Documents\GitHub\Picomotor-Controls-1\test1.mg'
+    scope_setup_path = r'C:\Users\afham\Documents\MetaGuide\test1.mg'
+    #scope_setup_path = r'C:\Users\linz\Documents\GitHub\Picomotor-Controls-1\test1.mg'
     os.startfile(scope_setup_path)
     time.sleep(3)
 
@@ -171,6 +172,7 @@ async def main():
 
     # Use windows test loopback adapter for local network to bypass need for router. Use CMD ipconfig/all
     # to find ipv4 and subnet mask for the test loopback adapter once you've installed it from Device Manager.
+    # for example, the default test loopback for your Windows device may be 169.254.255.255
 
     monitor = MGMonitor(listener)
     monitor.start()

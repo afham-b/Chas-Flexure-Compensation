@@ -4,6 +4,7 @@ import asyncio
 import threading
 import matplotlib.pyplot as plt
 from pylablib.devices import Newport
+import math
 
 import socket
 pico_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -70,27 +71,53 @@ class MotorOperations:
             self.controller.stop(axis='all', immediate=True)
             await asyncio.sleep(0.01)
 
-        asyncio.sleep(0.01)
+        await asyncio.sleep(0.01)
             
         self.motor = 2
         # x axis motor
         if abs(self.delt_x) > self.margin_of_error:
-            print('delta x moving')
+            #print('delta x moving')
             # switch to motor 2 to move the x-axis since self by default is y
-            print('motor number is ' + str(self.motor))
+            #print('motor number is ' + str(self.motor))
             steps_x = steps_x
-            print("steps x: " + str(steps_x))
+            #print("steps x: " + str(steps_x))
             await self.move_by_steps(steps_x)
         else:
             self.controller.stop(axis='all', immediate=True)
             await asyncio.sleep(0.01)
         # switch back to motor 1 default
 
+    async def calibrate(self):
+        print('calibrate picomotors:' + str(self.delt_x) + str(self.delt_y))
+        print("hitting the calibrate")
+        # print('Motor Number: ' + str(self.motor))
+
+        # use for finding slope
+        first_x = self.delt_x
+        first_y = self.delt_y
+
+        # move y motor in negative motor direction to get positive y shift to find slope
+        #await self.move_by_steps(5000 * -1)
+        await asyncio.sleep(1)
+
+        second_y = self.delt_y
+        second_x = self.delt_x
+
+        #theta = math.pi / 2 - math.atan((second_y - first_y) / (second_x - first_x))
+        #self.theta = theta
+        #print('theta = ' + str(self.theta))
+
+
+
     async def start_sock_data(self):
+        loop_tracker = 0
         while True:
             data, _ = pico_sock.recvfrom(4096)  # Buffer size
             self.delt_x, self.delt_y = map(float, data.decode().split(','))
             #print('Socket data received: ' + str(self.delt_x) + str(self.delt_y))
+            if loop_tracker == 0:
+                await self.calibrate()
+                loop_tracker = loop_tracker + 1
             asyncio.create_task(self.control_picomotors())
             await asyncio.sleep(0.01)
 
@@ -124,7 +151,7 @@ class MotorOperations:
         self.controller.move_by(self.motor, steps)
 
         start_time = time.time()
-        timeout = 2  # Timeout in n seconds
+        timeout = 3  # Timeout in n seconds
 
         moving = True
 
