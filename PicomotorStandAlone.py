@@ -55,6 +55,8 @@ class MotorOperations:
         steps_x = move_x / self.step_size
         steps_y = move_y / self.step_size
 
+        #add in case for if theta is zero or perhaps theta is non-zero
+
         # direction: invert steps for inverted x axis of correction
         invert = -1
         steps_x = steps_x * invert
@@ -102,6 +104,10 @@ class MotorOperations:
 
         second_y = self.delt_y
         second_x = self.delt_x
+
+        if second_x-first_x == 0:
+            #there is no rotational offset, angle is zero
+            return
 
         #theta = math.pi / 2 - math.atan((second_y - first_y) / (second_x - first_x))
         #self.theta = theta
