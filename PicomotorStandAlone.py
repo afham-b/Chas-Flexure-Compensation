@@ -3,6 +3,7 @@ import time
 import asyncio
 import threading
 import math
+from datetime import datetime
 import matplotlib.pyplot as plt
 from pylablib.devices import Newport
 
@@ -11,6 +12,9 @@ import socket
 pico_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 server_address = ('127.0.0.1', 5002)  # Use the same address and port as MGListener
 pico_sock.bind(server_address)
+
+# file name of the calibration data
+filename = 'calibration_data.txt'
 
 
 class MotorOperations:
@@ -145,10 +149,14 @@ class MotorOperations:
             second_y = self.delt_y
             second_x = self.delt_x
 
-            if second_x != first_x:
-                theta = math.pi / 2 - math.atan((second_y - first_y) / (second_x - first_x))
+            if second_y != first_y:
+                theta = math.asin((second_x - first_x) / (second_y - first_y))
                 self.theta = theta
                 print(f'Theta = {self.theta}')
+                f = open(filename, 'a')
+                f.write('\n'+str(datetime.now()) + '\n' + str(self.theta))
+                f.close()
+
             else:
                 self.theta = 0
                 print("Calibration: No rotational offset detected")
