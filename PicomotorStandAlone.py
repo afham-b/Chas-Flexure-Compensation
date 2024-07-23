@@ -31,6 +31,19 @@ class MotorOperations:
         self.delt_y = 0
         self.theta = 0
 
+        # when instance is initialized, retrieve the theta value from calibration_data.txt
+        with open(filename, 'r') as file:
+            lines = file.readlines()
+            # Ensure there is at least one line in the file
+            if not lines:
+                raise ValueError("The Calibration Data File is empty.")
+
+            # Get the latest theta value (last line)
+            latest_theta = float(lines[-1].strip())
+
+            self.theta = latest_theta
+
+
         # measure and modify the two parameters below for your magnification
         # distance in mm
         self.distance_lens_lightscourse = 118
@@ -121,7 +134,8 @@ class MotorOperations:
     async def calibrate(self):
 
         print("Beginning Calibration")
-        await asyncio.sleep(3)
+        #print('Past Stored Theta Values:' + str(self.theta))
+        await asyncio.sleep(1)
         print('Calibrate Picomotors: ' + str(self.delt_x) + ", " + str(self.delt_y))
         # print('Motor Number: ' + str(self.motor))
 
@@ -135,15 +149,8 @@ class MotorOperations:
             await asyncio.sleep(1)
             # move y motor in negative motor direction to get positive y shift to find slope
             await self.move_by_steps(5000 * -1)
-            await asyncio.sleep(5)
+            await asyncio.sleep(1)
 
-            # XY_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            # server_address = ('127.0.0.1', 5001)  # Use the same address and port as MGListener
-            # XY_sock.bind(server_address)
-            # data1, _ = XY_sock.recvfrom(4096)  # Buffer size
-            # await asyncio.sleep(0.01)
-            # print(f"Calibration received data: {data1}")
-            #self.delt_x, self.delt_y = map(float, data1.decode().split(','))
 
             print(f"Second X & Y : {self.delt_x}, {self.delt_y}")
             second_y = self.delt_y
@@ -183,7 +190,8 @@ class MotorOperations:
 
             #await asyncio.sleep(0.01)
             await self.control_picomotors()
-            #await asyncio.sleep(0.01)
+            await asyncio.sleep(0.01)
+
 
     def set_velocity(self, speed, acceleration=10000):
         self.controller.setup_velocity(self.motor, speed=speed, accel=acceleration)
