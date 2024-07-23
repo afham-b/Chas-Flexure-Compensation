@@ -22,6 +22,7 @@ class MotorOperations:
         self.close_speed = close_speed
         self.very_close_speed = very_close_speed
         self.set_velocity(self.default_speed, acceleration=10000)
+        self.calibrated = 0
         self.delt_x = 0
         self.delt_y = 0
         self.theta = 0
@@ -103,9 +104,21 @@ class MotorOperations:
             await asyncio.sleep(0.01)
         # switch back to motor 1 default
 
+
+    async def calibration_data_stream(self):
+        while True:
+            data, _ = pico_sock.recvfrom(4096)  # Buffer size
+            self.delt_x, self.delt_y = map(float, data.decode().split(','))
+            if self.calibrated == 1:
+                break
+            await asyncio.sleep(0.01)
+
+
     async def calibrate(self):
-        print('calibrate picomotors: ' + str(self.delt_x) + ", " + str(self.delt_y))
-        print("hitting the calibrate")
+
+        print("Beginning Calibration")
+        await asyncio.sleep(3)
+        print('Calibrate Picomotors: ' + str(self.delt_x) + ", " + str(self.delt_y))
         # print('Motor Number: ' + str(self.motor))
 
         try:
@@ -113,24 +126,26 @@ class MotorOperations:
             # use for finding slope
             first_x = self.delt_x
             first_y = self.delt_y
-            print(f"first x and y: {self.delt_x}, {self.delt_y}")
+            print(f"First x and y: {self.delt_x}, {self.delt_y}")
+
+            await asyncio.sleep(1)
             # move y motor in negative motor direction to get positive y shift to find slope
             await self.move_by_steps(5000 * -1)
-            await asyncio.sleep(1)
+            await asyncio.sleep(5)
 
-            XY_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            server_address = ('127.0.0.1', 5001)  # Use the same address and port as MGListener
-            XY_sock.bind(server_address)
-            data1, _ = XY_sock.recvfrom(4096)  # Buffer size
-            await asyncio.sleep(0.01)
-
+            # XY_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            # server_address = ('127.0.0.1', 5001)  # Use the same address and port as MGListener
+            # XY_sock.bind(server_address)
+            # data1, _ = XY_sock.recvfrom(4096)  # Buffer size
+            # await asyncio.sleep(0.01)
             # print(f"Calibration received data: {data1}")
-            self.delt_x, self.delt_y = map(float, data1.decode().split(','))
-            print(f"new deltas: {self.delt_x}, {self.delt_y}")
+            #self.delt_x, self.delt_y = map(float, data1.decode().split(','))
+
+            print(f"Second X & Y : {self.delt_x}, {self.delt_y}")
             second_y = self.delt_y
             second_x = self.delt_x
 
-            if second_x != second_y:
+            if second_x != first_x:
                 theta = math.pi / 2 - math.atan((second_y - first_y) / (second_x - first_x))
                 self.theta = theta
                 print(f'Theta = {self.theta}')
@@ -143,9 +158,13 @@ class MotorOperations:
 
         print("Moving y motor back to the original position")
         await self.move_by_steps(5000)
-        await asyncio.sleep(2)
+        await asyncio.sleep(1)
         print(f"Calibrated! Theta is {self.theta}")
+        self.calibrated = 1
         await asyncio.sleep(0.001)
+
+    async def calibration_process(self):
+        await asyncio.gather(self.calibration_data_stream(), self.calibrate())
 
     async def start_sock_data(self):
         loop_tracker = 0
@@ -154,13 +173,9 @@ class MotorOperations:
             self.delt_x, self.delt_y = map(float, data.decode().split(','))
             # print('Socket data received: ' + str(self.delt_x) + str(self.delt_y))
 
-            if loop_tracker == 0:
-                await self.calibrate()
-                loop_tracker = loop_tracker + 1
-
-            await asyncio.sleep(0.01)
+            #await asyncio.sleep(0.01)
             await self.control_picomotors()
-            await asyncio.sleep(0.01)
+            #await asyncio.sleep(0.01)
 
     def set_velocity(self, speed, acceleration=10000):
         self.controller.setup_velocity(self.motor, speed=speed, accel=acceleration)
