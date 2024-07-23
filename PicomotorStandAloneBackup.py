@@ -2,9 +2,9 @@ import sys
 import time
 import asyncio
 import threading
-import math
 import matplotlib.pyplot as plt
 from pylablib.devices import Newport
+import math
 
 import socket
 
@@ -24,7 +24,6 @@ class MotorOperations:
         self.set_velocity(self.default_speed, acceleration=10000)
         self.delt_x = 0
         self.delt_y = 0
-        self.theta = 0
 
         # measure and modify the two parameters below for your magnification
         # distance in mm
@@ -50,30 +49,19 @@ class MotorOperations:
     async def control_picomotors(self):
         print('control_picomotors output (x,y): ' + str(round(self.delt_x, 4)) + ', ' + str(round(self.delt_y, 4)))
 
+        # Convert these deltas into microns * some arbitrary correction scale
         move_x = self.delt_x * self.correction_scale
         move_y = self.delt_y * self.correction_scale
-        print(f"move_x and move_y: {move_x}, {move_y}")
-        await asyncio.sleep(0.1)
 
-        # using theta
-        if self.theta != 0:
-            corrected_move_x = move_x * math.cos(self.theta) - move_y * math.sin(self.theta)
-            corrected_move_y = move_x * math.sin(self.theta) + move_y * math.cos(self.theta)
-            print(f"with theta move_x and move_y are {corrected_move_x} , {corrected_move_y}")
-        else:
-            corrected_move_x = move_x
-            corrected_move_y = move_y
-            print(f"theta is zero, move_x and move_y are {corrected_move_x} , {corrected_move_y}")
+        # Convert microns into steps, once picomotor step is 20 nm (default denominator is 0.02)
+        steps_x = move_x / self.step_size
+        steps_y = move_y / self.step_size
 
-        # Convert microns to steps
-        steps_x = corrected_move_x / self.step_size
-        steps_y = corrected_move_y / self.step_size
+        # add in case for if theta is zero or perhaps theta is non-zero
 
-        # direction: invert steps for x axis correction
+        # direction: invert steps for inverted x axis of correction
         invert = -1
         steps_x = steps_x * invert
-        # steps_y = steps_y * invert
-        print(f"Steps_x and y: {steps_x}, {steps_y}")
 
         self.motor = 1
         # this only include y axis
@@ -92,11 +80,11 @@ class MotorOperations:
         self.motor = 2
         # x axis motor
         if abs(self.delt_x) > self.margin_of_error:
-            print('delta x moving')
+            # print('delta x moving')
             # switch to motor 2 to move the x-axis since self by default is y
-            print('motor number is ' + str(self.motor))
+            # print('motor number is ' + str(self.motor))
             steps_x = steps_x
-            print("steps x: " + str(steps_x))
+            # print("steps x: " + str(steps_x))
             await self.move_by_steps(steps_x)
         else:
             self.controller.stop(axis='all', immediate=True)
@@ -104,48 +92,28 @@ class MotorOperations:
         # switch back to motor 1 default
 
     async def calibrate(self):
-        print('calibrate picomotors: ' + str(self.delt_x) + ", " + str(self.delt_y))
+        print('calibrate picomotors:' + str(self.delt_x) + str(self.delt_y))
         print("hitting the calibrate")
         # print('Motor Number: ' + str(self.motor))
 
-        try:
-            await asyncio.sleep(1)
-            # use for finding slope
-            first_x = self.delt_x
-            first_y = self.delt_y
-            print(f"first x and y: {self.delt_x}, {self.delt_y}")
-            # move y motor in negative motor direction to get positive y shift to find slope
-            await self.move_by_steps(5000 * -1)
-            await asyncio.sleep(1)
+        # use for finding slope
+        first_x = self.delt_x
+        first_y = self.delt_y
 
-            XY_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            server_address = ('127.0.0.1', 5001)  # Use the same address and port as MGListener
-            XY_sock.bind(server_address)
-            data1, _ = XY_sock.recvfrom(4096)  # Buffer size
-            await asyncio.sleep(0.01)
+        # move y motor in negative motor direction to get positive y shift to find slope
+        # await self.move_by_steps(5000 * -1)
+        await asyncio.sleep(1)
 
-            # print(f"Calibration received data: {data1}")
-            self.delt_x, self.delt_y = map(float, data1.decode().split(','))
-            print(f"new deltas: {self.delt_x}, {self.delt_y}")
-            second_y = self.delt_y
-            second_x = self.delt_x
+        second_y = self.delt_y
+        second_x = self.delt_x
 
-            if second_x != second_y:
-                theta = math.pi / 2 - math.atan((second_y - first_y) / (second_x - first_x))
-                self.theta = theta
-                print(f'Theta = {self.theta}')
-            else:
-                self.theta = 0
-                print("Calibration: No rotational offset detected")
+        if second_x - first_x == 0:
+            # there is no rotational offset, angle is zero
+            return
 
-        except Exception as e:
-            print(f"Error during calibration: {e}")
-
-        print("Moving y motor back to the original position")
-        await self.move_by_steps(5000)
-        await asyncio.sleep(2)
-        print(f"Calibrated! Theta is {self.theta}")
-        await asyncio.sleep(0.001)
+        # theta = math.pi / 2 - math.atan((second_y - first_y) / (second_x - first_x))
+        # self.theta = theta
+        # print('theta = ' + str(self.theta))
 
     async def start_sock_data(self):
         loop_tracker = 0
@@ -153,13 +121,10 @@ class MotorOperations:
             data, _ = pico_sock.recvfrom(4096)  # Buffer size
             self.delt_x, self.delt_y = map(float, data.decode().split(','))
             # print('Socket data received: ' + str(self.delt_x) + str(self.delt_y))
-
             if loop_tracker == 0:
                 await self.calibrate()
                 loop_tracker = loop_tracker + 1
-
-            await asyncio.sleep(0.01)
-            await self.control_picomotors()
+            asyncio.create_task(self.control_picomotors())
             await asyncio.sleep(0.01)
 
     def set_velocity(self, speed, acceleration=10000):
@@ -192,7 +157,7 @@ class MotorOperations:
         self.controller.move_by(self.motor, steps)
 
         start_time = time.time()
-        timeout = 5  # Timeout in n seconds
+        timeout = 3  # Timeout in n seconds
 
         moving = True
 
@@ -205,15 +170,14 @@ class MotorOperations:
                 # self.controller.stop(axis='all', immediate=True, addr=self.address)
                 self.controller.stop(axis='all', immediate=True)
                 moving = False
-                # self.controller = controller # is this breaking the code?
+                self.controller = controller
                 await self.start_sock_data()
                 break
 
-            # time.sleep(0.001)
-            await asyncio.sleep(0.001)
+            time.sleep(0.001)
 
-        await asyncio.sleep(0.001)  # Pause for n seconds
-        # time.sleep(0.001)
+        # await asyncio.sleep(0.001)  # Pause for n seconds
+        time.sleep(0.001)
 
     async def set_position_reference(self, position=0):
         # Set the current position as the reference position
@@ -402,5 +366,7 @@ if __name__ == "__main__":
                 stop_motors(controller)
                 loop.close()
                 controller.close()
+
+
             end()
             print("done")

@@ -126,6 +126,7 @@ async def main():
     try:
         controller = Newport.Picomotor8742()
         print(controller)
+        global motor_y
         motor_y = PicomotorStandAlone.MotorOperations(controller, motor=1)
         # test to see if motors move:
         # motor_x = PicomotorStandAlone.MotorOperations(controller, motor=2)
@@ -226,16 +227,24 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
+
         print("Ending:")
+
+        #stop the motor
+        motor_y.controller.stop(axis='all', immediate=True)
+
         # kill processes via PIDs
         mgpid = get_pid('MetaGuide.exe')
         apid = get_pid('ASCOM.TelescopeSimulator.exe')
         pids_to_kill = [mgpid, apid]
         kill_processes(pids_to_kill)
+
         # clean ports
         cleaner = SocketCleaner()
         cleaner.cleanup()
+
         # end Listener, Monitor threads
         end_threads()
         print("Done!")
+
         sys.exit(0)
