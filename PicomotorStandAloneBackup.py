@@ -2,19 +2,15 @@ import sys
 import time
 import asyncio
 import threading
-import math
-from datetime import datetime
 import matplotlib.pyplot as plt
 from pylablib.devices import Newport
+import math
 
 import socket
 
 pico_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 server_address = ('127.0.0.1', 5002)  # Use the same address and port as MGListener
 pico_sock.bind(server_address)
-
-# file name of the calibration data
-filename = 'calibration_data.txt'
 
 
 class MotorOperations:
@@ -26,23 +22,8 @@ class MotorOperations:
         self.close_speed = close_speed
         self.very_close_speed = very_close_speed
         self.set_velocity(self.default_speed, acceleration=10000)
-        self.calibrated = 0
         self.delt_x = 0
         self.delt_y = 0
-        self.theta = 0
-
-        # when instance is initialized, retrieve the theta value from calibration_data.txt
-        with open(filename, 'r') as file:
-            lines = file.readlines()
-            # Ensure there is at least one line in the file
-            if not lines:
-                raise ValueError("The Calibration Data File is empty.")
-
-            # Get the latest theta value (last line)
-            latest_theta = float(lines[-1].strip())
-
-            self.theta = latest_theta
-
 
         # measure and modify the two parameters below for your magnification
         # distance in mm
@@ -56,11 +37,11 @@ class MotorOperations:
         self.effective_pixel_size = self.camera_pixel_size / self.magnification
 
         # set scale factor for picomotor motion from camera feedback
-        self.motion_scale = 1.00
+        self.motion_scale = 0.5
         self.correction_scale = self.effective_pixel_size * self.motion_scale
 
         # the pico motor moves 20 nm per step, adjust this value based on the mas the motor moves
-        self.step_size = 0.010
+        self.step_size = 0.019
 
         # how close we want the picomotor to try to get to the home position
         self.margin_of_error = 1
@@ -68,45 +49,19 @@ class MotorOperations:
     async def control_picomotors(self):
         print('control_picomotors output (x,y): ' + str(round(self.delt_x, 4)) + ', ' + str(round(self.delt_y, 4)))
 
-        if self.theta != 0:
-            corrected_delta_x = self.delt_x * math.cos(self.theta) - self.delt_y * math.sin(self.theta)
-            corrected_delta_y = self.delt_x * math.sin(self.theta) + self.delt_y * math.cos(self.theta)
-            #print("Corrected with theta (x,y)" + str(corrected_delta_x) + ' ' + str(corrected_delta_y))
-        else:
-            corrected_delta_x = self.delt_x
-            corrected_delta_y = self.delt_y
+        # Convert these deltas into microns * some arbitrary correction scale
+        move_x = self.delt_x * self.correction_scale
+        move_y = self.delt_y * self.correction_scale
 
-        move_x = corrected_delta_x * self.correction_scale
-        move_y = corrected_delta_y * self.correction_scale
-
+        # Convert microns into steps, once picomotor step is 20 nm (default denominator is 0.02)
         steps_x = move_x / self.step_size
         steps_y = move_y / self.step_size
 
+        # add in case for if theta is zero or perhaps theta is non-zero
 
-        # move_x = self.delt_x * self.correction_scale
-        # move_y = self.delt_y * self.correction_scale
-        # print(f"move_x and move_y: {move_x}, {move_y}")
-        # await asyncio.sleep(0.1)
-        #
-        # # using theta
-        # if self.theta != 0:
-        #     corrected_move_x = move_x * math.cos(self.theta) - move_y * math.sin(self.theta)
-        #     corrected_move_y = move_x * math.sin(self.theta) + move_y * math.cos(self.theta)
-        #     print(f"with theta move_x and move_y are {corrected_move_x} , {corrected_move_y}")
-        # else:
-        #     corrected_move_x = move_x
-        #     corrected_move_y = move_y
-        #     print(f"theta is zero, move_x and move_y are {corrected_move_x} , {corrected_move_y}")
-        #
-        # # Convert microns to steps
-        # steps_x = corrected_move_x / self.step_size
-        # steps_y = corrected_move_y / self.step_size
-
-        # direction: invert steps for x axis correction
+        # direction: invert steps for inverted x axis of correction
         invert = -1
         steps_x = steps_x * invert
-        # steps_y = steps_y * invert
-        #print(f"Steps_x and y: {steps_x}, {steps_y}")
 
         self.motor = 1
         # this only include y axis
@@ -125,76 +80,40 @@ class MotorOperations:
         self.motor = 2
         # x axis motor
         if abs(self.delt_x) > self.margin_of_error:
-            #print('delta x moving')
+            # print('delta x moving')
             # switch to motor 2 to move the x-axis since self by default is y
-            #print('motor number is ' + str(self.motor))
-            #print("steps x: " + str(steps_x))
+            # print('motor number is ' + str(self.motor))
+            steps_x = steps_x
+            # print("steps x: " + str(steps_x))
             await self.move_by_steps(steps_x)
         else:
             self.controller.stop(axis='all', immediate=True)
             await asyncio.sleep(0.01)
         # switch back to motor 1 default
 
-
-    async def calibration_data_stream(self):
-        while True:
-            data, _ = pico_sock.recvfrom(4096)  # Buffer size
-            self.delt_x, self.delt_y = map(float, data.decode().split(','))
-            if self.calibrated == 1:
-                break
-            await asyncio.sleep(0.01)
-
-
     async def calibrate(self):
-
-        print("Beginning Calibration")
-        #print('Past Stored Theta Values:' + str(self.theta))
-        await asyncio.sleep(1)
-        print('Calibrate Picomotors: ' + str(self.delt_x) + ", " + str(self.delt_y))
+        print('calibrate picomotors:' + str(self.delt_x) + str(self.delt_y))
+        print("hitting the calibrate")
         # print('Motor Number: ' + str(self.motor))
 
-        try:
-            await asyncio.sleep(2)
-            # use for finding slope
-            first_x = self.delt_x
-            first_y = self.delt_y
-            print(f"First x and y: {self.delt_x}, {self.delt_y}")
+        # use for finding slope
+        first_x = self.delt_x
+        first_y = self.delt_y
 
-            await asyncio.sleep(3)
-            # move y motor in negative motor direction to get positive y shift to find slope
-            await self.move_by_steps(5000 * -1)
-            await asyncio.sleep(3)
-
-
-            print(f"Second X & Y : {self.delt_x}, {self.delt_y}")
-            second_y = self.delt_y
-            second_x = self.delt_x
-
-            if second_y != first_y and second_x != first_x:
-                theta = math.asin((second_x - first_x) / (second_y - first_y))
-                self.theta = theta
-                print(f'Theta = {self.theta}')
-                f = open(filename, 'a')
-                f.write('\n'+str(datetime.now()) + '\n' + str(self.theta))
-                f.close()
-            elif second_x == first_x:
-                self.theta = 0
-                print("Calibration: No rotational offset detected")
-            elif second_y == first_y:
-                print("Error In Calibration")
-
-        except Exception as e:
-            print(f"Error during calibration: {e}")
-
-        print("Moving y motor back to the original position")
-        await self.move_by_steps(5000)
+        # move y motor in negative motor direction to get positive y shift to find slope
+        # await self.move_by_steps(5000 * -1)
         await asyncio.sleep(1)
-        print(f"Calibrated! Theta is {self.theta}")
-        self.calibrated = 1
-        await asyncio.sleep(0.001)
 
-    async def calibration_process(self):
-        await asyncio.gather(self.calibration_data_stream(), self.calibrate())
+        second_y = self.delt_y
+        second_x = self.delt_x
+
+        if second_x - first_x == 0:
+            # there is no rotational offset, angle is zero
+            return
+
+        # theta = math.pi / 2 - math.atan((second_y - first_y) / (second_x - first_x))
+        # self.theta = theta
+        # print('theta = ' + str(self.theta))
 
     async def start_sock_data(self):
         loop_tracker = 0
@@ -202,11 +121,11 @@ class MotorOperations:
             data, _ = pico_sock.recvfrom(4096)  # Buffer size
             self.delt_x, self.delt_y = map(float, data.decode().split(','))
             # print('Socket data received: ' + str(self.delt_x) + str(self.delt_y))
-
-            #await asyncio.sleep(0.01)
-            await self.control_picomotors()
+            if loop_tracker == 0:
+                await self.calibrate()
+                loop_tracker = loop_tracker + 1
+            asyncio.create_task(self.control_picomotors())
             await asyncio.sleep(0.01)
-
 
     def set_velocity(self, speed, acceleration=10000):
         self.controller.setup_velocity(self.motor, speed=speed, accel=acceleration)
@@ -238,35 +157,27 @@ class MotorOperations:
         self.controller.move_by(self.motor, steps)
 
         start_time = time.time()
-        timeout = 5  # Timeout in n seconds
+        timeout = 3  # Timeout in n seconds
 
         moving = True
 
         while not (stop_event and stop_event.is_set()) and moving:
-            await asyncio.sleep(0.01)
+            # await asyncio.sleep(0.001)
             elapsed_time = time.time() - start_time
-            try:
-                if not self.controller.is_moving(self.motor):
-                     break
-            except Exception as e:
-                print(f"Error checking if motor is moving: {e}")
-                await asyncio.sleep(0.005)
-
             moving = self.controller.is_moving(self.motor)
             if elapsed_time > timeout:
                 print("Move_by_Steps Timeout reached")
                 # self.controller.stop(axis='all', immediate=True, addr=self.address)
                 self.controller.stop(axis='all', immediate=True)
                 moving = False
-                # self.controller = controller # is this breaking the code?
+                self.controller = controller
                 await self.start_sock_data()
                 break
 
-            # time.sleep(0.001)
-            await asyncio.sleep(0.01)
+            time.sleep(0.001)
 
-        await asyncio.sleep(0.001)  # Pause for n seconds
-        # time.sleep(0.001)
+        # await asyncio.sleep(0.001)  # Pause for n seconds
+        time.sleep(0.001)
 
     async def set_position_reference(self, position=0):
         # Set the current position as the reference position
@@ -455,5 +366,7 @@ if __name__ == "__main__":
                 stop_motors(controller)
                 loop.close()
                 controller.close()
+
+
             end()
             print("done")

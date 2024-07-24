@@ -113,6 +113,27 @@ def end_threads():
         print("Monitor is not running")
 
 
+def ending():
+    # stop the motor
+    motor_y.controller.stop(axis='all', immediate=True)
+
+    # kill processes via PIDs
+    mgpid = get_pid('MetaGuide.exe')
+    apid = get_pid('ASCOM.TelescopeSimulator.exe')
+    pids_to_kill = [mgpid, apid]
+    kill_processes(pids_to_kill)
+
+    # clean ports
+    cleaner = SocketCleaner()
+    cleaner.cleanup()
+
+    # end Listener, Monitor threads
+    end_threads()
+    print("Done!")
+
+    sys.exit(0)
+
+
 async def main():
     global listener, monitor
 
@@ -209,11 +230,15 @@ async def main():
 
     async def starting():
         await asyncio.gather(
-            motor_y.start_sock_data(),
+            motor_y.calibration_process(),
             # receive_data()
         )
 
     await starting()
+
+    #end the programs
+    ending()
+
 
 
 # If using run_as_admin:
@@ -227,24 +252,5 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-
         print("Ending:")
-
-        #stop the motor
-        motor_y.controller.stop(axis='all', immediate=True)
-
-        # kill processes via PIDs
-        mgpid = get_pid('MetaGuide.exe')
-        apid = get_pid('ASCOM.TelescopeSimulator.exe')
-        pids_to_kill = [mgpid, apid]
-        kill_processes(pids_to_kill)
-
-        # clean ports
-        cleaner = SocketCleaner()
-        cleaner.cleanup()
-
-        # end Listener, Monitor threads
-        end_threads()
-        print("Done!")
-
-        sys.exit(0)
+        ending()
