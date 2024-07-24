@@ -229,7 +229,7 @@ async def main():
     #asyncio.run(receive_data())
 
     # file name of the calibration data
-    filename = 'calibration_data.txt'
+    filename = 'calibration_data_nosecone.txt'
 
     async def starting():
         await asyncio.gather(
@@ -241,7 +241,6 @@ async def main():
 
     #end the programs
     ending()
-
 
 
 # If using run_as_admin:
