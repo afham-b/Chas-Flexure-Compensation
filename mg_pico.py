@@ -198,7 +198,7 @@ async def main():
 
         while True:
             data, _ = XY_sock.recvfrom(4096)  # Buffer size
-            delt_x, delt_y = map(float, data.decode().split(','))
+            delt_x, delt_y, x_init, y_init = map(float, data.decode().split(','))
 
             # Process received data to control picomotors
             #asyncio.create_task(control_picomotors(delt_x, delt_y))

@@ -23,6 +23,19 @@ from MGListener import MyListener, MGListener, MGMonitor
 import PicomotorStandAlone
 from pylablib.devices import Newport
 
+# Check the command-line arguments to set the filename
+if len(sys.argv) != 2:
+    print("Usage: python calibration.py [nosecone|microlens]")
+    sys.exit(1)
+
+if sys.argv[1].lower() == 'nosecone':
+    filename = 'calibration_data_nosecone.txt'
+elif sys.argv[1].lower() == 'microlens':
+    filename = 'calibration_data.txt'
+else:
+    print("Invalid argument. Use 'nosecone' or 'microlens'.")
+    sys.exit(1)
+
 # If popups appear: run CMD as admin OR use run_as_admin() OR use run_as_admin.bat
 """def run_as_admin(): # see below for main()
     if sys.platform == 'win32':
@@ -219,7 +232,7 @@ async def main():
 
         while True:
             data, _ = XY_sock.recvfrom(4096)  # Buffer size
-            delt_x, delt_y = map(float, data.decode().split(','))
+            delt_x, delt_y, x_init, y_init = map(float, data.decode().split(','))
 
             # Process received data to control picomotors
             #asyncio.create_task(control_picomotors(delt_x, delt_y))
@@ -229,7 +242,7 @@ async def main():
     #asyncio.run(receive_data())
 
     # file name of the calibration data
-    filename = 'calibration_data_nosecone.txt'
+    # filename = 'calibration_data_.txt'
 
     async def starting():
         await asyncio.gather(
