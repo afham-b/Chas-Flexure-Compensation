@@ -27,6 +27,8 @@ class MotorOperations:
         self.very_close_speed = very_close_speed
         self.set_velocity(self.default_speed, acceleration=10000)
         self.calibrated = 0
+        self.x_init = 0
+        self.y_init = 0
         self.delt_x = 0
         self.delt_y = 0
         self.theta = 0
@@ -143,7 +145,7 @@ class MotorOperations:
     async def calibration_data_stream(self):
         while True:
             data, _ = pico_sock.recvfrom(4096)  # Buffer size
-            self.delt_x, self.delt_y = map(float, data.decode().split(','))
+            self.delt_x, self.delt_y, self.x_init, self.y_init= map(float, data.decode().split(','))
             if self.calibrated == 1:
                 break
             await asyncio.sleep(0.01)
@@ -207,11 +209,14 @@ class MotorOperations:
         loop_tracker = 0
         while True:
             data, _ = pico_sock.recvfrom(4096)  # Buffer size
-            self.delt_x, self.delt_y = map(float, data.decode().split(','))
+            self.delt_x, self.delt_y, self.x_init, self.y_init= map(float, data.decode().split(','))
             # print('Socket data received: ' + str(self.delt_x) + str(self.delt_y))
 
             #await asyncio.sleep(0.01)
-            await self.control_picomotors()
+            if self.delt_x + self.x_init != -1.00:
+                await self.control_picomotors()
+
+            #await self.control_picomotors()
             await asyncio.sleep(0.001)
 
 

@@ -291,8 +291,9 @@ class MGListener(threading.Thread):
             # only get here if a good message was received and parsed
             # now invoke the user's function in a subclass
             if loop_tracker == 0 and (self.x > 0 or self.y > 0):
-                self.firstxy()
-                loop_tracker = loop_tracker + 1
+                if self.x != -1.00:
+                    self.firstxy()
+                    loop_tracker = loop_tracker + 1
 
             self.doit()
 
@@ -321,7 +322,7 @@ class MyListener(MGListener):
         #print("%s : %s"%(self.msg, self.msgtxt))
 
         # Send delt_x and delt_y
-        message = f'{delta_x},{delta_y}'
+        message = f'{delta_x},{delta_y},{self.x_init},{self.y_init}'
         XY_sock.sendto(message.encode(), server_address)
         Pico_sock.sendto(message.encode(), pico_server_address)
 
