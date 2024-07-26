@@ -14,8 +14,8 @@ server_address = ('127.0.0.1', 5002)  # Use the same address and port as MGListe
 pico_sock.bind(server_address)
 
 # file name of the calibration data
-#filename = 'calibration_data.txt'
-filename = 'calibration_data_nosecone.txt'
+#filename = 'calibration_data.txt' # microlens
+filename = 'calibration_data_nosecone.txt' #nosecone
 
 class MotorOperations:
     def __init__(self, controller, motor, default_speed=1750, close_speed=800, very_close_speed=40):
@@ -32,6 +32,10 @@ class MotorOperations:
         self.delt_x = 0
         self.delt_y = 0
         self.theta = 0
+        self.calibration_files = ['calibration_data.txt', 'calibration_data_nosecone.txt']
+        self.calibration_data = {file: {'theta': None, 'timestamp': None} for file in self.calibration_files}
+        self.read_calibration_data()
+
 
         # when instance is initialized, retrieve the theta value from calibration_data.txt
         with open(filename, 'r') as file:
@@ -205,8 +209,28 @@ class MotorOperations:
     async def calibration_process(self, filename):
         await asyncio.gather(self.calibration_data_stream(), self.calibrate(filename))
 
+    def read_calibration_data(self):
+        for file in self.calibration_files:
+            try:
+                with open(file, 'r') as f:
+                    lines = f.readlines()
+                    if lines:
+                        latest_entry = lines[-2:]
+                        timestamp = latest_entry[0].strip()
+                        theta = float(latest_entry[1].strip())
+                        self.calibration_data[file] = {'theta': theta, 'timestamp': timestamp}
+            except FileNotFoundError:
+                print(f"file {file} not found.")
+            except Exception as e:
+                print(f"Error reading file {file}: {e}")
+
     async def start_sock_data(self):
         loop_tracker = 0
+
+        print("Last calibrated:")
+        for file, data in self.calibration_data.items():
+            print(f"    {file}: \n          Theta: {data['theta']}    \n          Time: {data['timestamp']}")
+
         while True:
             data, _ = pico_sock.recvfrom(4096)  # Buffer size
             self.delt_x, self.delt_y, self.x_init, self.y_init= map(float, data.decode().split(','))
