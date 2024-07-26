@@ -79,15 +79,15 @@ def kill_processes(pids, sig=signal.SIGTERM):
             process = psutil.Process(pid)
             return process.name()
         except psutil.NoSuchProcess:
-            print(f"No process found with PID {pid}.")
+            print(f"    No process found with PID {pid}.")
             return None
     for pid in pids:
         try:
             os.kill(pid, sig)
-            print(f"Process with PID {pid} terminated: "+get_program_name(pid))
+            print(f"    Process with PID {pid} terminated: "+get_program_name(pid))
         except OSError as e:
-            print(f"Error {e} terminating process {pid}: "+get_program_name(pid))
-    print("Processes killed")
+            print(f"    Error {e} terminating process {pid}: "+get_program_name(pid))
+    print(f"    Processes killed")
 
 
 def get_pid(process_name):
@@ -103,14 +103,14 @@ def end_threads():
     if listener.is_alive():
         listener.stop()
         listener.join()
-        print("Listener stopped")
+        print(f"    Listener stopped")
     else:
-        print("Listener is not running")
+        print(f"    Listener is not running")
     if monitor.is_alive():
         monitor.join()
-        print("Monitor stopped")
+        print(f"    Monitor stopped")
     else:
-        print("Monitor is not running")
+        print(f"    Monitor is not running")
 
 
 async def main():
@@ -143,8 +143,8 @@ async def main():
 
     # We start with a saved MetaGuide setup file: test1.mg
     # remember to change to your own path!
-    scope_setup_path = r'C:\Users\afham\Documents\MetaGuide\test1.mg'
-    #scope_setup_path = r'C:\Users\linz\Documents\GitHub\Picomotor-Controls-1\test1.mg'
+    #scope_setup_path = r'C:\Users\afham\Documents\MetaGuide\test1.mg'
+    scope_setup_path = r'C:\Users\linz\Documents\GitHub\Picomotor-Controls-1\test1.mg'
     os.startfile(scope_setup_path)
     time.sleep(3)
 

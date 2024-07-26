@@ -10,9 +10,9 @@ class SocketCleaner:
         print(f"Closing socket bound to port {port_number}")
         try:
             sock.bind(self.server_address)
-            print("Socket closed")
+            print(f"    Socket closed")
         except OSError as e:
-            print(f"Socket bind failed: {e}")
+            print(f"    Socket bind failed: {e}")
         finally:
             sock.close()
 
