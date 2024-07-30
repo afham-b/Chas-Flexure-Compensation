@@ -15,6 +15,12 @@ import ctypes
 # to clean ports
 from PortCleanUp import SocketCleaner
 
+#connect to the Arduino after StandardFirmata is loaded, use to communicate with light
+from lighttest import ArduinoController
+
+global arduino
+arduino = ArduinoController('COM7', 8)
+
 # MGListener.py must be in the same directory as mg_track.py
 # By default, MGListener.py is located in program files x86 \ MetaGuide folder
 from MGListener import MyListener, MGListener, MGMonitor
@@ -130,6 +136,10 @@ def ending():
     # stop the motor
     motor_y.controller.stop(axis='all', immediate=True)
 
+    # turn off Arduino
+    arduino.board.digital[arduino.pin].write(0)
+    arduino.board.exit()
+
     # kill processes via PIDs
     mgpid = get_pid('MetaGuide.exe')
     apid = get_pid('ASCOM.TelescopeSimulator.exe')
@@ -177,8 +187,8 @@ async def main():
 
     # We start with a saved MetaGuide setup file: test1.mg
     # remember to change to your own path!
-    #scope_setup_path = r'C:\Users\afham\Documents\MetaGuide\test1.mg'
-    scope_setup_path = r'C:\Users\linz\Documents\GitHub\Picomotor-Controls-1\test1.mg'
+    scope_setup_path = r'C:\Users\afham\Documents\MetaGuide\test1.mg'
+    #scope_setup_path = r'C:\Users\linz\Documents\GitHub\Picomotor-Controls-1\test1.mg'
     os.startfile(scope_setup_path)
     time.sleep(3)
 

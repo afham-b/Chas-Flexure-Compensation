@@ -69,7 +69,7 @@ class MotorOperations:
         self.correction_scale = self.effective_pixel_size * self.motion_scale
 
         # the pico motor moves 20 nm per step, adjust this value based on the mas the motor moves
-        self.step_size = 0.02
+        self.step_size = 0.015
 
         # how close we want the picomotor to try to get to the home position
         self.margin_of_error = 1
@@ -77,13 +77,13 @@ class MotorOperations:
     async def control_picomotors(self):
         print('control_picomotors output (x,y): ' + str(round(self.delt_x, 4)) + ', ' + str(round(self.delt_y, 4)))
 
-        #if self.theta != 0:
-        #    corrected_delta_x = self.delt_x * math.cos(self.theta) - self.delt_y * math.sin(self.theta)
-        #    corrected_delta_y = self.delt_x * math.sin(self.theta) + self.delt_y * math.cos(self.theta)
+        if self.theta != 0:
+            corrected_delta_x = self.delt_x * math.cos(self.theta) - self.delt_y * math.sin(self.theta)
+            corrected_delta_y = self.delt_x * math.sin(self.theta) + self.delt_y * math.cos(self.theta)
             #print("Corrected with theta (x,y)" + str(corrected_delta_x) + ' ' + str(corrected_delta_y))
-        #else:
-        corrected_delta_x = self.delt_x
-        corrected_delta_y = self.delt_y
+        else:
+            corrected_delta_x = self.delt_x
+            corrected_delta_y = self.delt_y
 
         move_x = corrected_delta_x * self.correction_scale
         move_y = corrected_delta_y * self.correction_scale
@@ -114,8 +114,8 @@ class MotorOperations:
         # direction: invert steps for x-axis correction on microlens array plate
         # direction: invert steps for x-axis correction on mirror plate
         invert = -1
-        steps_x = steps_x * invert
-        #steps_y = steps_y * invert
+        #steps_x = steps_x * invert
+        steps_y = steps_y * invert
         #print(f"Steps_x and y: {steps_x}, {steps_y}")
 
         self.motor = 1
@@ -173,7 +173,7 @@ class MotorOperations:
         print("Beginning Calibration")
         #print('Past Stored Theta Values:' + str(self.theta))
         await asyncio.sleep(1)
-        print('Calibrate Picomotors: ' + str(self.delt_x) + ", " + str(self.delt_y))
+        print(f"Calibrate Picomotors: {self.delt_x}, {self.delt_y}")
         # print('Motor Number: ' + str(self.motor))
 
         try:
@@ -192,7 +192,7 @@ class MotorOperations:
             await self.move_by_steps(calibration_steps)
             await asyncio.sleep(3)
 
-            print(f"Second X & Y : {self.delt_x}, {self.delt_y}")
+            print(f"Second x and y: {self.delt_x}, {self.delt_y}")
             second_y = self.delt_y
             second_x = self.delt_x
 
@@ -205,9 +205,9 @@ class MotorOperations:
                 f.close()
             elif second_x == first_x:
                 self.theta = 0
-                print("Calibration: No rotational offset detected")
+                print("Calibration: No rotational offset detected (x)")
             elif second_y == first_y:
-                print("Error In Calibration")
+                print("Error In Calibration: No offset detected (y)")
 
         except Exception as e:
             print(f"Error during calibration: {e}")
@@ -237,7 +237,7 @@ class MotorOperations:
             except Exception as e:
                 print(f"Error reading file {file}: {e}")
 
-    # async def start_sock_data(self, arduino):
+    #async def start_sock_data(self, arduino):
     async def start_sock_data(self):
         loop_tracker = 0
 
@@ -252,6 +252,7 @@ class MotorOperations:
 
             #await asyncio.sleep(0.01)
             #print('X is : ' + str(self.delt_x+self.x_init))
+            #if (self.delt_x+self.x_init) != -1.00 and arduino.light
             if (self.delt_x+self.x_init) != -1.00:
                 await self.control_picomotors()
 

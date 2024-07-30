@@ -189,7 +189,7 @@ async def main():
 
     async def control_picomotors(delt_x, delt_y):
         # These deltas are in pixels
-        print('Server output,' + str(delt_x) + ',' + str(delt_y))
+        print('Server output:' + str(delt_x) + ',' + str(delt_y))
 
     async def receive_data():
         # Set up UDP socket to listen
@@ -216,7 +216,7 @@ async def main():
         await asyncio.gather(
             motor_y.start_sock_data(),
             #motor_y.start_sock_data(arduino),
-            arduino.toggle_led(1, 5)
+            arduino.toggle_led(1, 15)
             # receive_data()
         )
 
