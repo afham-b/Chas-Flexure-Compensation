@@ -5,6 +5,7 @@
 import sys
 import pyfirmata
 import time
+import asyncio
 
 # # Set up the Arduino board and the pin
 # board = pyfirmata.Arduino('COM7')
@@ -35,12 +36,12 @@ class ArduinoController:
             self.board.digital[self.pin].write(1)
             self.light = True
             #print(self.light)
-            time.sleep(on_time)
+            await asyncio.sleep(on_time)
 
             self.board.digital[self.pin].write(0)
             self.light = False
             #print(self.light)
-            time.sleep(off_time)
+            await asyncio.sleep(off_time)
 
 
     def stop(self):
@@ -50,6 +51,7 @@ class ArduinoController:
 
 # Example usage:
 if __name__ == "__main__":
+    #ensure that you have the correct com port, check com ports in device manager to view
     arduino = ArduinoController('COM7', 8)
     try:
         arduino.toggle_led(on_time=1, off_time=15)

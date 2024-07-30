@@ -214,13 +214,14 @@ async def main():
 
     async def starting():
         await asyncio.gather(
-            motor_y.start_sock_data(arduino),
-            arduino.toggle_led(1, 15)
+            motor_y.start_sock_data(),
+            #motor_y.start_sock_data(arduino),
+            arduino.toggle_led(1, 5)
             # receive_data()
         )
 
     print("Waiting For Initialization.")
-    time.sleep(5)
+    time.sleep(1)
 
     while True:
         if listener.initialized:
@@ -248,7 +249,8 @@ if __name__ == "__main__":
         motor_y.controller.stop(axis='all', immediate=True)
 
         # turn off Arduino
-        arduino.stop()
+        arduino.board.digital[arduino.pin].write(0)
+        arduino.board.exit()
 
         # kill processes via PIDs
         mgpid = get_pid('MetaGuide.exe')
