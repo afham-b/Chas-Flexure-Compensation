@@ -24,18 +24,29 @@ class ArduinoController:
         self.board = pyfirmata.Arduino(port)
         self.pin = pin
         time.sleep(2)  # Allow time for the board to initialize
-        self.light = 0 # light is false :. light is off
 
-    def toggle_led(self, on_time=1, off_time=1):
+        # default is to start with the light off
+        self.board.digital[self.pin].write(1)
+
+        self.light = True  # light is true :. light is on
+
+    async def toggle_led(self, on_time=1, off_time=1):
         while True:
             self.board.digital[self.pin].write(1)
+            self.light = True
+            #print(self.light)
             time.sleep(on_time)
+
             self.board.digital[self.pin].write(0)
+            self.light = False
+            #print(self.light)
             time.sleep(off_time)
 
+
     def stop(self):
+        self.board.digital[self.pin].write(0)
         self.board.exit()
-        sys.exit(0)
+        #sys.exit(0)
 
 # Example usage:
 if __name__ == "__main__":

@@ -6,6 +6,7 @@ import math
 from datetime import datetime
 import matplotlib.pyplot as plt
 from pylablib.devices import Newport
+from lighttest import ArduinoController
 
 import socket
 
@@ -119,16 +120,28 @@ class MotorOperations:
 
         self.motor = 1
         # this only include y axis
+
+        # for testing
+        print("Correction Beginning, @Line 124")
+        print('Delta Y: ' + str(self.delt_y))
+        print('Delta X: ' + str(self.delt_x))
+
+
         if abs(self.delt_y) > self.margin_of_error:
             # print('delta y moving')
             # print('motor number is ' + str(self.motor))
+            print('about to await move by steps y')
             await self.move_by_steps(steps_y)
+            print('move by steps y awaited')
             await asyncio.sleep(0.001)
         else:
             # self.controller.stop(axis='all', immediate=True, addr=self.address)
             self.controller.stop(axis='all', immediate=True)
-            await asyncio.sleep(0.001)
+            print('stopped motion y')
+            time.sleep(0.001)
+            print('line 142 done')
 
+        print('pausing before motor switch')
         await asyncio.sleep(0.001)
 
         self.motor = 2
@@ -137,12 +150,17 @@ class MotorOperations:
             #print('delta x moving')
             # switch to motor 2 to move the x-axis since self by default is y
             #print('motor number is ' + str(self.motor))
+            print('about to await move by steps x')
             #print("steps x: " + str(steps_x))
+            print('move by steps x awaited')
             await self.move_by_steps(steps_x)
             await asyncio.sleep(0.001)
         else:
             self.controller.stop(axis='all', immediate=True)
+            print('stopped motion x')
             await asyncio.sleep(0.001)
+
+        return
         # switch back to motor 1 default
 
 
@@ -224,7 +242,7 @@ class MotorOperations:
             except Exception as e:
                 print(f"Error reading file {file}: {e}")
 
-    async def start_sock_data(self):
+    async def start_sock_data(self, arduino):
         loop_tracker = 0
 
         print("Last calibrated:")
@@ -233,11 +251,13 @@ class MotorOperations:
 
         while True:
             data, _ = pico_sock.recvfrom(4096)  # Buffer size
-            self.delt_x, self.delt_y, self.x_init, self.y_init= map(float, data.decode().split(','))
-            # print('Socket data received: ' + str(self.delt_x) + str(self.delt_y))
+            self.delt_x, self.delt_y, self.x_init, self.y_init = map(float, data.decode().split(','))
+            print('Socket data received: ' + str(self.delt_x) + str(self.delt_y))
 
             #await asyncio.sleep(0.01)
-            if self.delt_x + self.x_init != -1.00:
+            x = self.delt_x + self.x_init
+            print('X is : ' + str(x))
+            if x != -1.00:
                 await self.control_picomotors()
 
             #await self.control_picomotors()

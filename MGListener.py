@@ -4,6 +4,9 @@ import sys
 import select
 import math
 
+#connect to the Arduino after StandardFirmata is loaded, use to communicate with light
+from lighttest import ArduinoController
+
 #Needed for newport motor controller
 from pylablib.devices import Newport
 
@@ -46,8 +49,9 @@ class MGListener(threading.Thread):
         self.deadtime = deadtime
         self.x = -1             # x coordinate of centroid
         self.y = -1             # y
-        self.x_init = -1        # initial x coordinate
-        self.y_init = -1        # initial y coordinate
+        self.x_init = 0        # initial x coordinate
+        self.y_init = 0        # initial y coordinate
+        self.initialized = False
         self.ew = 0             # east/west component relative to center of screen
         self.ns = 0             # north/south
         self.ewcos = 0          # east/west component boosted by 1/cos(dec) for axis angle
@@ -313,7 +317,10 @@ class MyListener(MGListener):
         time.sleep(0.1)
         self.x_init = self.x
         self.y_init = self.y
+        self.initialized = True
         #print("Initial X, Y of the star are: ", self.x_init, self.y_init)
+
+
 
     def doit(self):
         delta_x = self.x - self.x_init

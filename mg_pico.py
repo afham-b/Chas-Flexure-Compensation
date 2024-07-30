@@ -12,6 +12,9 @@ import asyncio
 import pyuac
 import ctypes
 
+#connect to the Arduino after StandardFirmata is loaded, use to communicate with light
+from lighttest import ArduinoController
+
 # to clean ports
 from PortCleanUp import SocketCleaner
 
@@ -47,6 +50,8 @@ from pylablib.devices import Newport
 #motion_scale = 0.01
 #correction_scale = effective_pixel_size * motion_scale
 
+global arduino
+arduino = ArduinoController('COM7', 8)
 
 def handle_client_connection(client_socket):
     while True:
@@ -209,9 +214,18 @@ async def main():
 
     async def starting():
         await asyncio.gather(
-            motor_y.start_sock_data(),
+            motor_y.start_sock_data(arduino),
+            arduino.toggle_led(1, 15)
             # receive_data()
         )
+
+    print("Waiting For Initialization.")
+    time.sleep(5)
+
+    while True:
+        if listener.initialized:
+            break
+        await asyncio.sleep(0.01)
 
     await starting()
 
@@ -233,6 +247,9 @@ if __name__ == "__main__":
         #stop the motor
         motor_y.controller.stop(axis='all', immediate=True)
 
+        # turn off Arduino
+        arduino.stop()
+
         # kill processes via PIDs
         mgpid = get_pid('MetaGuide.exe')
         apid = get_pid('ASCOM.TelescopeSimulator.exe')
@@ -245,6 +262,8 @@ if __name__ == "__main__":
 
         # end Listener, Monitor threads
         end_threads()
+
+
         print("Done!")
 
         sys.exit(0)
