@@ -314,7 +314,7 @@ class MyListener(MGListener):
     Simple example showing how to subclass MGListener to act on data from MetaGuide
     """
     def firstxy(self):
-        time.sleep(0.1)
+        time.sleep(0.01)
         self.x_init = self.x
         self.y_init = self.y
         self.initialized = True

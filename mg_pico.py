@@ -148,10 +148,10 @@ async def main():
 
     # We start with a saved MetaGuide setup file: test1.mg
     # remember to change to your own path!
-    scope_setup_path = r'C:\Users\afham\Documents\MetaGuide\test1.mg'
+    scope_setup_path = r'C:\Users\afham\Documents\MetaGuide\fibertest1.mg'
     #scope_setup_path = r'C:\Users\linz\Documents\GitHub\Picomotor-Controls-1\test1.mg'
     os.startfile(scope_setup_path)
-    time.sleep(3)
+    time.sleep(7)
 
     # To see monitoring graphs:
     # monitor_path = r'C:\Program Files (x86)\MetaGuide\MetaMonitor.exe'

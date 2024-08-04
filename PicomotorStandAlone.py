@@ -72,7 +72,7 @@ class MotorOperations:
         self.step_size = 0.015
 
         # how close we want the picomotor to try to get to the home position
-        self.margin_of_error = 1
+        self.margin_of_error = 2
 
     async def control_picomotors(self):
         print('control_picomotors output (x,y): ' + str(round(self.delt_x, 4)) + ', ' + str(round(self.delt_y, 4)))
@@ -115,7 +115,7 @@ class MotorOperations:
         # direction: invert steps for x-axis correction on mirror plate
         invert = -1
         #steps_x = steps_x * invert
-        steps_y = steps_y * invert
+        #steps_y = steps_y * invert
         #print(f"Steps_x and y: {steps_x}, {steps_y}")
 
         self.motor = 1
