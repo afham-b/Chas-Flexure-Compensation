@@ -44,14 +44,26 @@ class MGListener(threading.Thread):
         # start threading if giving threading error, otherwise comment out
         # threading.Thread.__init__(self)
 
-        self.port = port
+        self.relay_port = port
+        self.lenslet_port = port+1
         self.timeout = timeout
         self.deadtime = deadtime
+
+        #relay variables
         self.x = -1             # x coordinate of centroid
         self.y = -1             # y
         self.x_init = 0        # initial x coordinate
         self.y_init = 0        # initial y coordinate
         self.initialized = False
+
+        #lenslet variables
+        self.lenslet_x = -1
+        self.lenslet_y = -1
+        self.lenslet_x_init = 0
+        self.lenslet_y_init = 0
+        self.lenslet_initialized = False
+
+
         self.ew = 0             # east/west component relative to center of screen
         self.ns = 0             # north/south
         self.ewcos = 0          # east/west component boosted by 1/cos(dec) for axis angle
@@ -109,13 +121,19 @@ class MGListener(threading.Thread):
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.sock.setblocking(False)
+
+            self.lenslet_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+            self.lenslet_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.lenslet_sock.setblocking(False)
+
         except:
             print("Error creating socket")
             return
         try:
-            self.sock.bind(('', self.port))
+            self.sock.bind(('', self.relay_port))
+            self.lenslet_sock.bind(('', self.lenslet_port))
         except:
-            print("Error binding to port", self.port)
+            print("Error binding to port", self.relay_port, self.lenslet_port)
             return
         self.listenMessages = True
         self.threadLock = threading.Lock()
@@ -183,6 +201,11 @@ class MGListener(threading.Thread):
                 ready = select.select([self.sock], [], [], self.timeout)
                 if ready[0]:
                     bmsg, _ = self.sock.recvfrom(1024)
+
+                ready_lenslet = select.select([self.lenslet_sock], [], [], self.timeout)
+                if ready_lenslet[0]:
+                    cmsg, _ = self.lenslet_sock.recvfrom(1024)
+
                 else:
                     # print("No data received after timeout - keep going")
                     self.tquiet = time.time()-tlastmsg
@@ -194,10 +217,17 @@ class MGListener(threading.Thread):
                 self.tquiet = time.time()-tlastmsg
                 continue
 
+            # for relay data from metagudie
             msg = bmsg.decode('utf-8')
             msgs = msg.split()
             ntok = len(msgs)
             self.msgtxt = msg
+
+            #for lenslet data from second metaguide instance
+            lenslet_msg = cmsg.decode('utf-8')
+            lenslet_msgs = lenslet_msg.split()
+            lenslet_ntok = len(lenslet_msgs)
+            self.lenslet_msgtext = lenslet_msg
 
             # corrupt message - ignore
             if ntok < 6:
@@ -291,6 +321,9 @@ class MGListener(threading.Thread):
             else:
                 self.tquiet = time.time()-tlastmsg
                 return
+
+            # for the lenslet
+            # past and modify lines 233- 323
 
             # only get here if a good message was received and parsed
             # now invoke the user's function in a subclass

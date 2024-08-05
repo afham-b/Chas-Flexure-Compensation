@@ -75,7 +75,7 @@ class MotorOperations:
 
         # set scale factor for picomotor motion from camera feedback
         #self.motion_scale = 0.75
-        self.motion_scale_y = 0.7
+        self.motion_scale_y = 0.5
         self.motion_scale_x = 0.7
 
         # the pico motor moves 20 nm per step, adjust this value based on the mas the motor moves
