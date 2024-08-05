@@ -19,7 +19,7 @@ pico_sock.bind(server_address)
 filename = 'calibration_data_nosecone.txt' #nosecone
 
 class MotorOperations:
-    def __init__(self, controller, motor, default_speed=1750, close_speed=800, very_close_speed=40):
+    def __init__(self, controller, motor, default_speed=1750, close_speed=1000, very_close_speed=40):
         self.controller = controller
         self.address = self.controller.get_addr()
         self.motor = motor
@@ -33,9 +33,14 @@ class MotorOperations:
         self.delt_x = 0
         self.delt_y = 0
         self.theta = 0
+
+        self.controller.setup_velocity(1, speed=close_speed, accel=800)
+        self.controller.setup_velocity(2, speed=close_speed, accel=800)
+
         self.calibration_files = ['calibration_data.txt', 'calibration_data_nosecone.txt']
         self.calibration_data = {file: {'theta': None, 'timestamp': None} for file in self.calibration_files}
         self.read_calibration_data()
+
 
 
         # when instance is initialized, retrieve the theta value from calibration_data.txt
@@ -57,19 +62,28 @@ class MotorOperations:
         # distance in mm
         self.distance_lens_lightscourse = 118
         self.distance_lens_ccd = 83
-        self.magnification = self.distance_lens_ccd / self.distance_lens_lightscourse
+
+        #if there is a lens on the camera use magnification calculation
+        #self.magnification = self.distance_lens_ccd / self.distance_lens_lightscourse
+        self.magnification = 1
 
         # pixel size (micrometer) can be found on camera specifications sheet
-        # for asi290mini pixel size is 2.9 microns, effective pixel size is ~ 4microns/pixel
+        # for asi290mini pixel size is 2.9 microns
         self.camera_pixel_size = 2.9
+        #effective pixel size is ~ 4microns/pixel with a lens or 2.9 micron/pixel with no no lens
         self.effective_pixel_size = self.camera_pixel_size / self.magnification
 
         # set scale factor for picomotor motion from camera feedback
-        self.motion_scale = 1
-        self.correction_scale = self.effective_pixel_size * self.motion_scale
+        #self.motion_scale = 0.75
+        self.motion_scale_y = 0.7
+        self.motion_scale_x = 0.7
 
         # the pico motor moves 20 nm per step, adjust this value based on the mas the motor moves
-        self.step_size = 0.015
+        #self.step_size = 0.02
+
+        #is actuation forces for the motors are not eqivalent in both axis, you can set axis specific stepsizes
+        self.step_size_y = 0.020
+        self.step_size_x = 0.020
 
         # how close we want the picomotor to try to get to the home position
         self.margin_of_error = 2
@@ -77,6 +91,7 @@ class MotorOperations:
     async def control_picomotors(self):
         print('control_picomotors output (x,y): ' + str(round(self.delt_x, 4)) + ', ' + str(round(self.delt_y, 4)))
 
+        # using theta correction
         if self.theta != 0:
             corrected_delta_x = self.delt_x * math.cos(self.theta) - self.delt_y * math.sin(self.theta)
             corrected_delta_y = self.delt_x * math.sin(self.theta) + self.delt_y * math.cos(self.theta)
@@ -85,11 +100,33 @@ class MotorOperations:
             corrected_delta_x = self.delt_x
             corrected_delta_y = self.delt_y
 
-        move_x = corrected_delta_x * self.correction_scale
-        move_y = corrected_delta_y * self.correction_scale
+        # not using theta correction
+        # corrected_delta_x = self.delt_x
+        # corrected_delta_y = self.delt_y
 
-        steps_x = move_x / self.step_size
-        steps_y = move_y / self.step_size
+        # n pixels where motion scales need to be dynamic (i.e big steps need to reduce overshooting)
+        motion_scale_switch_point = 10.0
+
+        if abs(self.delt_x) > motion_scale_switch_point:
+            self.motion_scale_x = 0.6
+            self.controller.setup_velocity(2, speed=1200, accel=800)
+        if abs(self.delt_y) > motion_scale_switch_point:
+            self.motion_scale_y = 0.6
+            self.controller.setup_velocity(1, speed=1200, accel=800)
+
+        if abs(self.delt_x) < 4.0:
+            self.controller.setup_velocity(2, speed=800, accel=800)
+        if abs(self.delt_y) < 4.0:
+            self.controller.setup_velocity(1, speed=800, accel=800)
+
+        correction_scale_x = self.effective_pixel_size * self.motion_scale_x
+        correction_scale_y = self.effective_pixel_size * self.motion_scale_y
+
+        move_x = corrected_delta_x * correction_scale_x
+        move_y = corrected_delta_y * correction_scale_y
+
+        steps_x = move_x / self.step_size_x
+        steps_y = move_y / self.step_size_y
 
 
         # move_x = self.delt_x * self.correction_scale
@@ -115,7 +152,7 @@ class MotorOperations:
         # direction: invert steps for x-axis correction on mirror plate
         invert = -1
         #steps_x = steps_x * invert
-        #steps_y = steps_y * invert
+        steps_y = steps_y * invert
         #print(f"Steps_x and y: {steps_x}, {steps_y}")
 
         self.motor = 1
@@ -136,11 +173,20 @@ class MotorOperations:
             await asyncio.sleep(0.001)
         else:
             # self.controller.stop(axis='all', immediate=True, addr=self.address)
-            self.controller.stop(axis='all', immediate=True)
+            #self.controller.stop(axis='all', immediate=True)
             #print('stopped motion y')
             await asyncio.sleep(0.001)
 
-        await asyncio.sleep(0.001)
+        #await asyncio.sleep(0.001)
+        moving = True
+        while moving:
+            try:
+                moving = self.controller.is_moving(self.motor)
+                if not moving:
+                    break
+            except Exception as e:
+                print(f"Error checking if motor is moving: {e}")
+                await asyncio.sleep(0.001)
 
         self.motor = 2
         # x axis motor
@@ -152,8 +198,12 @@ class MotorOperations:
             await self.move_by_steps(steps_x)
             await asyncio.sleep(0.001)
         else:
-            self.controller.stop(axis='all', immediate=True)
+            #self.controller.stop(axis='all', immediate=True)
             await asyncio.sleep(0.001)
+
+        #if abs(self.delt_x) > self.margin_of_error and abs(self.delt_y) > self.margin_of_error:
+        #    self.controller.stop(axis='all', immediate=True)
+
 
         #return
         # switch back to motor 1 default
@@ -187,7 +237,9 @@ class MotorOperations:
 
             # for the microlens array plate & mirror nosecone plate
             # move y motor in negative motor direction to get positive y shift to find slope
-            calibration_steps = 5000*-1
+            invert = -1
+            #calibration_steps = 5000*invert
+            calibration_steps = 5000
 
             await self.move_by_steps(calibration_steps)
             await asyncio.sleep(3)
@@ -237,8 +289,8 @@ class MotorOperations:
             except Exception as e:
                 print(f"Error reading file {file}: {e}")
 
-    #async def start_sock_data(self, arduino):
-    async def start_sock_data(self):
+    async def start_sock_data(self, arduino):
+    #async def start_sock_data(self):
         loop_tracker = 0
 
         print("Last calibrated:")
@@ -252,8 +304,8 @@ class MotorOperations:
 
             #await asyncio.sleep(0.01)
             #print('X is : ' + str(self.delt_x+self.x_init))
-            #if (self.delt_x+self.x_init) != -1.00 and arduino.light
-            if (self.delt_x+self.x_init) != -1.00:
+            if (self.delt_x+self.x_init) != -1.00 and arduino.light:
+            #if (self.delt_x+self.x_init) != -1.00 :
                 await self.control_picomotors()
 
             #await self.control_picomotors()

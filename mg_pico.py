@@ -148,10 +148,10 @@ async def main():
 
     # We start with a saved MetaGuide setup file: test1.mg
     # remember to change to your own path!
-    scope_setup_path = r'C:\Users\afham\Documents\MetaGuide\fibertest1.mg'
+    scope_setup_path = r'C:\Users\afham\Documents\MetaGuide\relaytest1.mg'
     #scope_setup_path = r'C:\Users\linz\Documents\GitHub\Picomotor-Controls-1\test1.mg'
     os.startfile(scope_setup_path)
-    time.sleep(7)
+    time.sleep(10)
 
     # To see monitoring graphs:
     # monitor_path = r'C:\Program Files (x86)\MetaGuide\MetaMonitor.exe'
@@ -214,9 +214,9 @@ async def main():
 
     async def starting():
         await asyncio.gather(
-            motor_y.start_sock_data(),
-            #motor_y.start_sock_data(arduino),
-            arduino.toggle_led(1, 15)
+            #motor_y.start_sock_data(),
+            motor_y.start_sock_data(arduino),
+            arduino.toggle_led(1, 5)
             # receive_data()
         )
 
