@@ -171,7 +171,7 @@ async def main():
         controller = Newport.Picomotor8742()
         print(controller)
         global motor_y
-        motor_y = PicomotorStandAlone.MotorOperations(controller, motor=1)
+        motor_y = PicomotorStandAlone.MotorOperations(controller, arduino, motor=1)
         # test to see if motors move:
         # motor_x = PicomotorStandAlone.MotorOperations(controller, motor=2)
         # motor_y.move_by_steps(1000, stop_event=None)
@@ -187,10 +187,10 @@ async def main():
 
     # We start with a saved MetaGuide setup file: test1.mg
     # remember to change to your own path!
-    scope_setup_path = r'C:\Users\afham\Documents\MetaGuide\relaytest1.mg'
+    scope_setup_path = r'C:\Users\afham\Documents\MetaGuide\fibertest1.mg'
     #scope_setup_path = r'C:\Users\linz\Documents\GitHub\Picomotor-Controls-1\test1.mg'
     os.startfile(scope_setup_path)
-    time.sleep(3)
+    time.sleep(10)
 
     # To see monitoring graphs:
     # monitor_path = r'C:\Program Files (x86)\MetaGuide\MetaMonitor.exe'

@@ -15,14 +15,15 @@ server_address = ('127.0.0.1', 5002)  # Use the same address and port as MGListe
 pico_sock.bind(server_address)
 
 # file name of the calibration data
-#filename = 'calibration_data.txt' # microlens
-filename = 'calibration_data_nosecone.txt' #nosecone
+filename = 'calibration_data.txt' # microlens lenslets
+#filename = 'calibration_data_nosecone.txt' #nosecone relay
 
 class MotorOperations:
-    def __init__(self, controller, motor, default_speed=1750, close_speed=1000, very_close_speed=40):
+    def __init__(self, controller, arduino, motor, default_speed=1750, close_speed=1000, very_close_speed=40):
         self.controller = controller
         self.address = self.controller.get_addr()
         self.motor = motor
+        self.arduino = arduino
         self.default_speed = default_speed
         self.close_speed = close_speed
         self.very_close_speed = very_close_speed
@@ -75,15 +76,15 @@ class MotorOperations:
 
         # set scale factor for picomotor motion from camera feedback
         #self.motion_scale = 0.75
-        self.motion_scale_y = 0.5
-        self.motion_scale_x = 0.7
+        self.motion_scale_y = 0.8
+        self.motion_scale_x = 0.8
 
         # the pico motor moves 20 nm per step, adjust this value based on the mas the motor moves
         #self.step_size = 0.02
 
         #is actuation forces for the motors are not eqivalent in both axis, you can set axis specific stepsizes
-        self.step_size_y = 0.020
-        self.step_size_x = 0.020
+        self.step_size_y = 0.015
+        self.step_size_x = 0.015
 
         # how close we want the picomotor to try to get to the home position
         self.margin_of_error = 2
@@ -152,7 +153,7 @@ class MotorOperations:
         # direction: invert steps for x-axis correction on mirror plate
         invert = -1
         #steps_x = steps_x * invert
-        steps_y = steps_y * invert
+        #steps_y = steps_y * invert
         #print(f"Steps_x and y: {steps_x}, {steps_y}")
 
         self.motor = 1
@@ -289,8 +290,8 @@ class MotorOperations:
             except Exception as e:
                 print(f"Error reading file {file}: {e}")
 
-    async def start_sock_data(self, arduino):
-    #async def start_sock_data(self):
+    #async def start_sock_data(self, arduino):
+    async def start_sock_data(self):
         loop_tracker = 0
 
         print("Last calibrated:")
@@ -304,7 +305,7 @@ class MotorOperations:
 
             #await asyncio.sleep(0.01)
             #print('X is : ' + str(self.delt_x+self.x_init))
-            if (self.delt_x+self.x_init) != -1.00 and arduino.light:
+            if (self.delt_x+self.x_init) != -1.00 and self.arduino.light:
             #if (self.delt_x+self.x_init) != -1.00 :
                 await self.control_picomotors()
 
@@ -342,7 +343,7 @@ class MotorOperations:
         self.controller.move_by(self.motor, steps)
 
         start_time = time.time()
-        timeout = 5  # Timeout in n seconds
+        timeout = 10  # Timeout in n seconds
 
         moving = True
 

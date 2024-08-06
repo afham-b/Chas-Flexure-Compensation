@@ -132,7 +132,7 @@ async def main():
         controller = Newport.Picomotor8742()
         print(controller)
         global motor_y
-        motor_y = PicomotorStandAlone.MotorOperations(controller, motor=1)
+        motor_y = PicomotorStandAlone.MotorOperations(controller, arduino, motor=1)
         # test to see if motors move:
         # motor_x = PicomotorStandAlone.MotorOperations(controller, motor=2)
         # motor_y.move_by_steps(1000, stop_event=None)
@@ -216,8 +216,8 @@ async def main():
 
     async def starting():
         await asyncio.gather(
-            #motor_y.start_sock_data(),
-            motor_y.start_sock_data(arduino),
+            motor_y.start_sock_data(),
+            #motor_y.start_sock_data(arduino),
             arduino.toggle_led(1, 5)
             # receive_data()
         )

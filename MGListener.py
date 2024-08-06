@@ -122,16 +122,16 @@ class MGListener(threading.Thread):
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.sock.setblocking(False)
 
-            self.lenslet_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-            self.lenslet_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.lenslet_sock.setblocking(False)
+            # self.lenslet_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+            # self.lenslet_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            # self.lenslet_sock.setblocking(False)
 
         except:
             print("Error creating socket")
             return
         try:
             self.sock.bind(('', self.relay_port))
-            self.lenslet_sock.bind(('', self.lenslet_port))
+            # self.lenslet_sock.bind(('', self.lenslet_port))
         except:
             print("Error binding to port", self.relay_port, self.lenslet_port)
             return
@@ -202,9 +202,9 @@ class MGListener(threading.Thread):
                 if ready[0]:
                     bmsg, _ = self.sock.recvfrom(1024)
 
-                ready_lenslet = select.select([self.lenslet_sock], [], [], self.timeout)
-                if ready_lenslet[0]:
-                    cmsg, _ = self.lenslet_sock.recvfrom(1024)
+                # ready_lenslet = select.select([self.lenslet_sock], [], [], self.timeout)
+                # if ready_lenslet[0]:
+                #     cmsg, _ = self.lenslet_sock.recvfrom(1024)
 
                 else:
                     # print("No data received after timeout - keep going")
@@ -224,10 +224,10 @@ class MGListener(threading.Thread):
             self.msgtxt = msg
 
             #for lenslet data from second metaguide instance
-            lenslet_msg = cmsg.decode('utf-8')
-            lenslet_msgs = lenslet_msg.split()
-            lenslet_ntok = len(lenslet_msgs)
-            self.lenslet_msgtext = lenslet_msg
+            # lenslet_msg = cmsg.decode('utf-8')
+            # lenslet_msgs = lenslet_msg.split()
+            # lenslet_ntok = len(lenslet_msgs)
+            # self.lenslet_msgtext = lenslet_msg
 
             # corrupt message - ignore
             if ntok < 6:
