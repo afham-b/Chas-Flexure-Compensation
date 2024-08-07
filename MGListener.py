@@ -350,6 +350,7 @@ class MyListener(MGListener):
         time.sleep(0.01)
         self.x_init = self.x
         self.y_init = self.y
+
         self.initialized = True
         #print("Initial X, Y of the star are: ", self.x_init, self.y_init)
 

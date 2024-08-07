@@ -120,6 +120,21 @@ def end_threads():
         print(f"    Monitor is not running")
 
 
+async def checkmotors():
+    # Start picomotor controller 8742 communication
+    while True:
+        n = Newport.get_usb_devices_number_picomotor()
+        if n == 0:
+            print("Picomotor devices disconnected")
+            try:
+                os.startfile(r'C:\Users\afham\Desktop\Chas\Custom\Samples\restart_admin.bat')
+                print('please run restartusb.py in cmd as admin')
+            except Exception as e:
+                print(f"Failed to run as administrator: {e}")
+                print('please run restartusb.py in cmd as admin')
+
+        asyncio.sleep(5)
+
 async def main():
     global listener, monitor
 
@@ -220,7 +235,8 @@ async def main():
         await asyncio.gather(
             motor_y.start_sock_data(),
             #motor_y.start_sock_data(arduino),
-            arduino.toggle_led(10, 0.01)
+            arduino.toggle_led(10, 0.01),
+            checkmotors()
             # receive_data()
         )
 

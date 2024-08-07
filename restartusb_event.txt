@@ -1,0 +1,33 @@
+Click on the Start button, type Task Scheduler in the "Start Search" box, then press Enter. Note: You can get to the Task Scheduler by using the Manage My Computer context menu from the "Computer" icon, by using the shortcut from the Administrative Tools folder, or by typing taskschd.msc in the Run box.
+
+In the Task Scheduler Management Console , on the Actions pane click Create Task.
+
+In the Create Task window, type in the name (and possibly the description) of the task. Click to select the “Run With Highest Privileges” checkbox. You do not need to change any other settings. Note: Remember the name of the task as we will need it later.
+
+In the Actions tab click New. Browse for the program you want your standard users to run without requiring UAC. Click OK and you will see your task entered into the Actions tab.
+
+For laptop or portable computers that might be running on batteries, go to the Conditions tab and un-check the “Start the Task only when computer is Running on AC Power” check-box.
+
+Go to the Settings tab and check that the default check-boxes are selected. Click OK when done.
+
+Back in the Task Scheduler main window you will now see the new task listed under Scheduler Library with the status of "Ready".
+
+Close Task Scheduler. Right-click an empty spot on your Desktop and select New > Shortcut. In the Create Shortcut window enter the following text:
+
+C:\Windows\System32\schtasks.exe /run /tn "TaskName"
+
+Where "TaskName" is the name of the task you chose, from step 3. Note: Include the quotation marks around the TaskName or it will fail to successfully run the task. Click Next and then enter a name for the shortcut. When done, click Finish.
+
+Whenever you want to run the specified program, simply double-click on the shortcut you've created without requiring UAC prompts or complete Administrator access.
+
+You can also further customize the shortcut with an icon or other settings if you wish.
+
+You will need to repeat this steps for any additional program you'll want to use without the need to answer the UAC prompts.
+
+
+powershell.exe
+
+-ExecutionPolicy Bypass -File "C:\Users\afham\Desktop\Chas\Custom\Samples\run_as_admin.ps1"
+
+
+
