@@ -14,7 +14,7 @@ ViewParity 0
 InputLag 2.000000
 Response 0.100000
 LPTPort ffffffff
-BkgThreshold 20
+BkgThreshold 5
 NFrames 15
 AcceptFraction 0.750000
 GuidePeriod 1.000000
@@ -31,17 +31,17 @@ DecLashMinus 0.000000
 DecReverse 0.000000
 NSReversed 0
 GuideX 0
-GuideY 934
+GuideY 916
 AdvancedView 1
 PromptLogComment 1
 OutputDir C:\Users\afham\Documents\MetaGuide
 ASCOMScopeName ASCOM.Simulator.Telescope
-CameraWidth 960
-CameraHeight 960
+CameraWidth 1280
+CameraHeight 720
 LockRadius 15
 DoBroadcast 1
 BroadcastMask 169.254.255.255
-BroadcastPort 1277
+BroadcastPort 1278
 IgnoreSatStars 0
 CalcSeeing 1
 GuideMode 1
@@ -57,11 +57,11 @@ RotatorAngle 0.000000
 RemoteGuideMeansXY 0
 KillHotPixels 0
 HotPixelNSigma 4.000000
-Exposure -14
+Exposure -5
 Gain 0
 UseCameraSettings 0
 StackTime 0.500000
 DitherRA 0
 ConnectToASCOM 1
 PulsePollTime 50.000000
-CameraName ASI290MM Mini Camera (ZWO Design)
+CameraName Microsoft Camera Rear

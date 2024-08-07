@@ -18,6 +18,8 @@ pico_sock.bind(server_address)
 filename = 'calibration_data.txt' # microlens lenslets
 #filename = 'calibration_data_nosecone.txt' #nosecone relay
 
+log = open('pico_log.txt', 'a')
+
 class MotorOperations:
     def __init__(self, controller, arduino, motor, default_speed=1750, close_speed=1000, very_close_speed=40):
         self.controller = controller
@@ -91,6 +93,8 @@ class MotorOperations:
 
     async def control_picomotors(self):
         print('control_picomotors output (x,y): ' + str(round(self.delt_x, 4)) + ', ' + str(round(self.delt_y, 4)))
+
+        log.write('\n' + str(datetime.now()) + '    ' + 'control_picomotors output (x,y): ' + str(round(self.delt_x, 4)) + ', ' + str(round(self.delt_y, 4)))
 
         # using theta correction
         if self.theta != 0:

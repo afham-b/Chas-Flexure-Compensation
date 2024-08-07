@@ -26,6 +26,8 @@ from MGListener import MyListener, MGListener, MGMonitor
 import PicomotorStandAlone
 from pylablib.devices import Newport
 
+log = open('pico_log.txt', 'a')
+
 # If popups appear: run CMD as admin OR use run_as_admin() OR use run_as_admin.bat
 """def run_as_admin(): # see below for main()
     if sys.platform == 'win32':
@@ -218,7 +220,7 @@ async def main():
         await asyncio.gather(
             motor_y.start_sock_data(),
             #motor_y.start_sock_data(arduino),
-            arduino.toggle_led(1, 5)
+            arduino.toggle_led(10, 0.01)
             # receive_data()
         )
 
@@ -253,6 +255,9 @@ if __name__ == "__main__":
         # turn off Arduino
         arduino.board.digital[arduino.pin].write(0)
         arduino.board.exit()
+
+        #close log file
+        log.close()
 
         # kill processes via PIDs
         mgpid = get_pid('MetaGuide.exe')

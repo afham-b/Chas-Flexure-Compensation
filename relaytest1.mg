@@ -14,7 +14,7 @@ ViewParity 0
 InputLag 2.000000
 Response 0.100000
 LPTPort ffffffff
-BkgThreshold 20
+BkgThreshold 5
 NFrames 15
 AcceptFraction 0.750000
 GuidePeriod 1.000000
@@ -31,12 +31,12 @@ DecLashMinus 0.000000
 DecReverse 0.000000
 NSReversed 0
 GuideX 0
-GuideY 934
+GuideY 918
 AdvancedView 1
 PromptLogComment 1
 OutputDir C:\Users\afham\Documents\MetaGuide
 ASCOMScopeName ASCOM.Simulator.Telescope
-CameraWidth 960
+CameraWidth 1280
 CameraHeight 960
 LockRadius 15
 DoBroadcast 1
@@ -57,7 +57,7 @@ RotatorAngle 0.000000
 RemoteGuideMeansXY 0
 KillHotPixels 0
 HotPixelNSigma 4.000000
-Exposure -14
+Exposure -10
 Gain 0
 UseCameraSettings 0
 StackTime 0.500000
