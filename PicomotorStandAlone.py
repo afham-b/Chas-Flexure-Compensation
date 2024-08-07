@@ -15,8 +15,8 @@ server_address = ('127.0.0.1', 5002)  # Use the same address and port as MGListe
 pico_sock.bind(server_address)
 
 # file name of the calibration data
-filename = 'calibration_data.txt' # microlens lenslets
-#filename = 'calibration_data_nosecone.txt' #nosecone relay
+#filename = 'calibration_data.txt' # microlens lenslets
+filename = 'calibration_data_nosecone.txt' #nosecone relay
 
 log = open('pico_log.txt', 'a')
 
@@ -71,20 +71,37 @@ class MotorOperations:
         self.magnification = 1
 
         # pixel size (micrometer) can be found on camera specifications sheet
-        # for asi290mini pixel size is 2.9 microns
-        self.camera_pixel_size = 2.9
-        #effective pixel size is ~ 4microns/pixel with a lens or 2.9 micron/pixel with no no lens
+        # for asi290mini pixel size is 2.9 microns/px
+        # for asi1600 pro pixel size is 3.8 microns/px
+
+        self.camera_pixel_size = 3.8
+        #self.camera_pixel_size = 2.9
+
+        #effective pixel size is ~ 4microns/pixel with a lens or 2.9 micron/pixel with no lens
         self.effective_pixel_size = self.camera_pixel_size / self.magnification
 
         # set scale factor for picomotor motion from camera feedback
         #self.motion_scale = 0.75
+
+        #lenslet
+        # self.motion_scale_y = 0.8
+        # self.motion_scale_x = 0.8
+
+        #relay
         self.motion_scale_y = 0.8
         self.motion_scale_x = 0.8
+
 
         # the pico motor moves 20 nm per step, adjust this value based on the mas the motor moves
         #self.step_size = 0.02
 
         #is actuation forces for the motors are not eqivalent in both axis, you can set axis specific stepsizes
+
+        #lenslet
+        # self.step_size_y = 0.015
+        # self.step_size_x = 0.015
+
+        #relay
         self.step_size_y = 0.015
         self.step_size_x = 0.015
 
