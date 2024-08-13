@@ -127,11 +127,14 @@ async def checkmotors():
         if n == 0:
             print("Picomotor devices disconnected")
             try:
+                print("Power Cycling Picomotor Controller Board, Standby")
                 os.startfile(r'C:\Users\afham\Desktop\Chas\Custom\Samples\restart_admin.bat')
-                print('please run restartusb.py in cmd as admin')
+                await arduino.relay_restart()
+                print("Restart complete")
             except Exception as e:
                 print(f"Failed to run as administrator: {e}")
-                print('please run restartusb.py in cmd as admin')
+                #print('please run restartusb.py in cmd as admin')
+                await arduino.relay_restart()
 
         await asyncio.sleep(5)
 

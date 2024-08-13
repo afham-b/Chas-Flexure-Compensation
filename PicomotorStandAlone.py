@@ -174,6 +174,10 @@ class MotorOperations:
         steps_x = move_x / self.step_size_x
         steps_y = move_y / self.step_size_y
 
+        #avoid attempting to move the picomotors by a non integer number of steps
+        steps_x = math.floor(steps_x)
+        steps_y = math.floor(steps_y)
+
 
         # move_x = self.delt_x * self.correction_scale
         # move_y = self.delt_y * self.correction_scale
