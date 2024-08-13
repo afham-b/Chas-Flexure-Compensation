@@ -53,7 +53,7 @@ log = open('pico_log.txt', 'a')
 #correction_scale = effective_pixel_size * motion_scale
 
 global arduino
-arduino = ArduinoController('COM7', 8)
+arduino = ArduinoController('COM7', 8, 2)
 
 def handle_client_connection(client_socket):
     while True:
@@ -133,7 +133,7 @@ async def checkmotors():
                 print(f"Failed to run as administrator: {e}")
                 print('please run restartusb.py in cmd as admin')
 
-        asyncio.sleep(5)
+        await asyncio.sleep(5)
 
 async def main():
     global listener, monitor
@@ -165,11 +165,11 @@ async def main():
 
     # We start with a saved MetaGuide setup file: test1.mg
     # remember to change to your own path!
-    relay_scope_setup_path = r'C:\Users\afham\Documents\MetaGuide\relaytest1.mg'
-    #lenslet_scope_setup_path = r'C:\Users\afham\Documents\MetaGuide\fibertest1.mg'
+    #relay_scope_setup_path = r'C:\Users\afham\Documents\MetaGuide\relaytest1.mg'
+    lenslet_scope_setup_path = r'C:\Users\afham\Documents\MetaGuide\fibertest1.mg'
     #scope_setup_path = r'C:\Users\linz\Documents\GitHub\Picomotor-Controls-1\test1.mg'
-    os.startfile(relay_scope_setup_path)
-    #os.startfile(lenslet_scope_setup_path)
+    #os.startfile(relay_scope_setup_path)
+    os.startfile(lenslet_scope_setup_path)
     time.sleep(10)
 
     # To see monitoring graphs:

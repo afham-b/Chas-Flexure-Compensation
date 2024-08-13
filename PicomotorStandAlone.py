@@ -15,8 +15,8 @@ server_address = ('127.0.0.1', 5002)  # Use the same address and port as MGListe
 pico_sock.bind(server_address)
 
 # file name of the calibration data
-#filename = 'calibration_data.txt' # microlens lenslets
-filename = 'calibration_data_nosecone.txt' #nosecone relay
+filename = 'calibration_data.txt' # microlens lenslets
+#filename = 'calibration_data_nosecone.txt' #nosecone relay
 
 log = open('pico_log.txt', 'a')
 
@@ -33,12 +33,23 @@ class MotorOperations:
         self.calibrated = 0
         self.x_init = 0
         self.y_init = 0
+        self.delt_x_previous = 0
+        self.delt_y_previous = 0
         self.delt_x = 0
         self.delt_y = 0
         self.theta = 0
 
-        self.controller.setup_velocity(1, speed=close_speed, accel=800)
-        self.controller.setup_velocity(2, speed=close_speed, accel=800)
+        self.controller.setup_velocity(1, speed=close_speed, accel=1000)
+        self.controller.setup_velocity(2, speed=close_speed, accel=1000)
+
+        #used to keep track of rejection of false guide coordinates from metaguide
+        self.pixel_threshold = 150
+        self.rejection_threshold = 10
+
+        #used to check to see if the motor is stuck, or arms are maxed out
+        self.stall_count = 0
+        self.stall_threshold = 2
+        self.max_stall_count = 50
 
         self.calibration_files = ['calibration_data.txt', 'calibration_data_nosecone.txt']
         self.calibration_data = {file: {'theta': None, 'timestamp': None} for file in self.calibration_files}
@@ -74,8 +85,8 @@ class MotorOperations:
         # for asi290mini pixel size is 2.9 microns/px
         # for asi1600 pro pixel size is 3.8 microns/px
 
-        self.camera_pixel_size = 3.8
-        #self.camera_pixel_size = 2.9
+        #self.camera_pixel_size = 3.8
+        self.camera_pixel_size = 2.9
 
         #effective pixel size is ~ 4microns/pixel with a lens or 2.9 micron/pixel with no lens
         self.effective_pixel_size = self.camera_pixel_size / self.magnification
@@ -109,6 +120,19 @@ class MotorOperations:
         self.margin_of_error = 2
 
     async def control_picomotors(self):
+
+        #vars used to keep track for previous deltas, which are assigned at the end of the control picomotors function
+        x_pre = self.delt_x
+        y_pre = self.delt_y
+
+        # since the real flexure we are compensating for is smooth and grows slowly
+        # attempt to reject sudden jumps in offset, likely due to camera metaguide error or mechanical issue
+        if (abs(self.delt_x)-abs(self.delt_x_previous) > self.pixel_threshold
+                or abs(self.delt_y) - abs(self.delt_y_previous) > 150):
+            self.delt_x = self.delt_x_previous
+            self.delt_y = self.delt_y_previous
+            print("REJECTED")
+
         print('control_picomotors output (x,y): ' + str(round(self.delt_x, 4)) + ', ' + str(round(self.delt_y, 4)))
 
         log.write('\n' + str(datetime.now()) + '    ' + 'control_picomotors output (x,y): ' + str(round(self.delt_x, 4)) + ', ' + str(round(self.delt_y, 4)))
@@ -131,14 +155,14 @@ class MotorOperations:
 
         if abs(self.delt_x) > motion_scale_switch_point:
             self.motion_scale_x = 0.6
-            self.controller.setup_velocity(2, speed=1200, accel=800)
+            self.controller.setup_velocity(2, speed=1400, accel=1000)
         if abs(self.delt_y) > motion_scale_switch_point:
             self.motion_scale_y = 0.6
-            self.controller.setup_velocity(1, speed=1200, accel=800)
+            self.controller.setup_velocity(1, speed=1400, accel=1000)
 
-        if abs(self.delt_x) < 4.0:
+        if abs(self.delt_x) < 4.5:
             self.controller.setup_velocity(2, speed=800, accel=800)
-        if abs(self.delt_y) < 4.0:
+        if abs(self.delt_y) < 4.5:
             self.controller.setup_velocity(1, speed=800, accel=800)
 
         correction_scale_x = self.effective_pixel_size * self.motion_scale_x
@@ -181,7 +205,7 @@ class MotorOperations:
         # this only include y axis
 
         # for testing
-        #print("Correction Beginning, @Line 124")
+        #print("Correction Beginning, @Line nnn")
         #print('Delta Y: ' + str(self.delt_y))
         #print('Delta X: ' + str(self.delt_x))
 
@@ -226,9 +250,17 @@ class MotorOperations:
         #if abs(self.delt_x) > self.margin_of_error and abs(self.delt_y) > self.margin_of_error:
         #    self.controller.stop(axis='all', immediate=True)
 
+        # if self.delt_x > self.margin_of_error or self.delt_y > self.margin_of_error:
+        #     if abs(self.delt_x - self.delt_x_previous) < self.stall_threshold or abs(
+        #         self.delt_y - self.delt_y_previous) < self.stall_threshold:
+        #         self.stall_count += 1
+        #     if self.stall_count > self.max_stall_count:
+        #         print("Motor is stalling. Resetting...")
+        # else:
+        #     self.stall_count = 0
 
-        #return
-        # switch back to motor 1 default
+        self.delt_x_previous = x_pre
+        self.delt_y_previous = y_pre
 
 
     async def calibration_data_stream(self):
