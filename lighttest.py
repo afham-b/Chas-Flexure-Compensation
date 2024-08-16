@@ -103,6 +103,7 @@ if __name__ == "__main__":
     arduino = ArduinoController('COM7', 8, 2)
     try:
         #arduino.toggle_led(on_time=1, off_time=15)
+        arduino.light_on()
         pass
     except KeyboardInterrupt:
         arduino.stop()

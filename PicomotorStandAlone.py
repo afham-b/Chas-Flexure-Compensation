@@ -39,8 +39,8 @@ class MotorOperations:
         self.delt_y = 0
         self.theta = 0
 
-        self.controller.setup_velocity(1, speed=close_speed, accel=1000)
-        self.controller.setup_velocity(2, speed=close_speed, accel=1000)
+        self.controller.setup_velocity(1, speed=close_speed, accel=800)
+        self.controller.setup_velocity(2, speed=close_speed, accel=800)
 
         #used to keep track of rejection of false guide coordinates from metaguide
         self.pixel_threshold = 100
@@ -48,7 +48,7 @@ class MotorOperations:
 
         #used to check to see if the motor is stuck, or arms are maxed out
         self.stall_count = 0
-        self.stall_threshold = 2
+        self.stall_threshold = 0.3
         self.max_stall_count = 50
 
         self.calibration_files = ['calibration_data.txt', 'calibration_data_nosecone.txt']
@@ -157,10 +157,10 @@ class MotorOperations:
 
         if abs(self.delt_x) > motion_scale_switch_point:
             self.motion_scale_x = 0.6
-            self.controller.setup_velocity(2, speed=1400, accel=1000)
+            self.controller.setup_velocity(2, speed=1000, accel=800)
         if abs(self.delt_y) > motion_scale_switch_point:
             self.motion_scale_y = 0.6
-            self.controller.setup_velocity(1, speed=1400, accel=1000)
+            self.controller.setup_velocity(1, speed=1000, accel=800)
 
         if abs(self.delt_x) < 4.5:
             self.controller.setup_velocity(2, speed=800, accel=800)
@@ -200,8 +200,8 @@ class MotorOperations:
         # steps_x = corrected_move_x / self.step_size
         # steps_y = corrected_move_y / self.step_size
 
-        # direction: invert steps for x-axis correction on microlens array plate
-        # direction: invert steps for x-axis correction on mirror plate
+        # direction: invert steps for x-axis correction on microlens/lenslet array plate
+        # direction: invert steps for x-axis correction on relay mirror
         invert = -1
         steps_x = steps_x * invert
         steps_y = steps_y * invert
@@ -229,7 +229,7 @@ class MotorOperations:
             #print('stopped motion y')
             await asyncio.sleep(0.001)
 
-        #await asyncio.sleep(0.001)
+        await asyncio.sleep(0.001)
         moving = True
         while moving:
             try:
@@ -256,16 +256,17 @@ class MotorOperations:
         #if abs(self.delt_x) > self.margin_of_error and abs(self.delt_y) > self.margin_of_error:
         #    self.controller.stop(axis='all', immediate=True)
 
-        if self.delt_x > self.margin_of_error or self.delt_y > self.margin_of_error:
-            if abs(self.delt_x - self.delt_x_previous) < self.stall_threshold or abs(
-                self.delt_y - self.delt_y_previous) < self.stall_threshold:
+        if abs(self.delt_x) > self.margin_of_error or abs(self.delt_y) > self.margin_of_error:
+            if abs(self.delt_x - self.delt_x_previous) > self.stall_threshold or abs(
+                self.delt_y - self.delt_y_previous) > self.stall_threshold:
                 self.stall_count += 1
             if self.stall_count > self.max_stall_count:
                 print("Motor is stalling. Resetting...")
+                #put in stalling code here, i.e return motor to home after and relay restart
         else:
             self.stall_count = 0
 
-        if rejected == False:
+        if not rejected:
             self.delt_x_previous = x_pre
             self.delt_y_previous = y_pre
 
