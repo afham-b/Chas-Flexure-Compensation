@@ -55,7 +55,7 @@ log = open('pico_log.txt', 'a')
 global arduino
 arduino = ArduinoController('COM7', 8, 2)
 #give arduino time to initialize and switch the relay on
-time.sleep(5)
+time.sleep(10)
 
 def handle_client_connection(client_socket):
     while True:
@@ -138,7 +138,8 @@ async def checkmotors():
                 #print('please run restartusb.py in cmd as admin')
                 await arduino.relay_restart()
 
-        await asyncio.sleep(5)
+        #asyncio.sleep(5)
+        await asyncio.sleep(0.01)
 
 async def main():
     global listener, monitor
@@ -147,7 +148,16 @@ async def main():
     n = Newport.get_usb_devices_number_picomotor()
     if n == 0:
         print("No Picomotor devices found.")
-        return
+        await arduino.relay_restart()
+        print('Restarting Controller Via Relay switch')
+        await asyncio.sleep(3)
+        try:
+            n = Newport.get_usb_devices_number_picomotor()
+        except Exception as e:
+            print(f"Failed to reconnect to the Picomotor controller after restart: {e}")
+            return  # Exit if the reconnection fails
+
+
     if n > 0:
         print('Controller found')
     try:
@@ -159,6 +169,24 @@ async def main():
         # motor_x = PicomotorStandAlone.MotorOperations(controller, motor=2)
         # motor_y.move_by_steps(1000, stop_event=None)
         # motor_x.move_by_steps(1000, stop_event=None)
+    except ValueError as e:
+        # Check if the error message matches the expected invalid literal error
+        if "invalid literal for int() with base 10" in str(e):
+            print("Error connecting to the Picomotor controller: invalid response detected")
+            print("Attempting to restart controller via Arduino relay")
+            await arduino.relay_restart()
+
+            try:
+                controller = Newport.Picomotor8742()
+                print(controller)
+                motor_y = PicomotorStandAlone.MotorOperations(controller, arduino, motor=1)
+            except Exception as e:
+                print(f"Failed to reconnect to the Picomotor controller after restart: {e}")
+                return  # Exit if the reconnection fails
+
+        else:
+            # If it's some other ValueError, raise it again
+            raise e
     except Exception as e:
         print(f"Error connecting to the Picomotor controller: {e}")
         return
@@ -247,7 +275,7 @@ async def main():
         await asyncio.gather(
             motor_y.start_sock_data(),
             #motor_y.start_sock_data(arduino),
-            arduino.toggle_led(10, 0.01),
+            arduino.toggle_led(60, 0.01),
             checkmotors()
             # receive_data()
         )
@@ -281,7 +309,6 @@ if __name__ == "__main__":
         motor_y.controller.stop(axis='all', immediate=True)
 
         # turn off Arduino
-        arduino.board.digital[arduino.pin].write(0)
         arduino.stop()
         arduino.board.exit()
 

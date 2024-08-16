@@ -12,14 +12,11 @@ import asyncio
 import pyuac
 import ctypes
 
-# to clean ports
-from PortCleanUp import SocketCleaner
-
 #connect to the Arduino after StandardFirmata is loaded, use to communicate with light
 from lighttest import ArduinoController
 
-global arduino
-arduino = ArduinoController('COM7', 8)
+# to clean ports
+from PortCleanUp import SocketCleaner
 
 # MGListener.py must be in the same directory as mg_track.py
 # By default, MGListener.py is located in program files x86 \ MetaGuide folder
@@ -30,10 +27,10 @@ import PicomotorStandAlone
 from pylablib.devices import Newport
 
 # Check the command-line arguments to set the filename
+
 if len(sys.argv) != 2:
     print("Usage: python calibration.py [nosecone|microlens]")
     sys.exit(1)
-
 if sys.argv[1].lower() == 'nosecone':
     filename = 'calibration_data_nosecone.txt'
 elif sys.argv[1].lower() == 'microlens':
@@ -41,6 +38,8 @@ elif sys.argv[1].lower() == 'microlens':
 else:
     print("Invalid argument. Use 'nosecone' or 'microlens'.")
     sys.exit(1)
+
+log = open('pico_log.txt', 'a')
 
 # If popups appear: run CMD as admin OR use run_as_admin() OR use run_as_admin.bat
 """def run_as_admin(): # see below for main()
@@ -66,6 +65,10 @@ else:
 #motion_scale = 0.01
 #correction_scale = effective_pixel_size * motion_scale
 
+global arduino
+arduino = ArduinoController('COM7', 8, 2)
+#give arduino time to initialize and switch the relay on
+time.sleep(5)
 
 def handle_client_connection(client_socket):
     while True:
@@ -98,15 +101,15 @@ def kill_processes(pids, sig=signal.SIGTERM):
             process = psutil.Process(pid)
             return process.name()
         except psutil.NoSuchProcess:
-            print(f"No process found with PID {pid}.")
+            print(f"    No process found with PID {pid}.")
             return None
     for pid in pids:
         try:
             os.kill(pid, sig)
-            print(f"Process with PID {pid} terminated: "+get_program_name(pid))
+            print(f"    Process with PID {pid} terminated: "+get_program_name(pid))
         except OSError as e:
-            print(f"Error {e} terminating process {pid}: "+get_program_name(pid))
-    print("Processes killed")
+            print(f"    Error {e} terminating process {pid}: "+get_program_name(pid))
+    print(f"    Processes killed")
 
 
 def get_pid(process_name):
@@ -122,23 +125,28 @@ def end_threads():
     if listener.is_alive():
         listener.stop()
         listener.join()
-        print("Listener stopped")
+        print(f"    Listener stopped")
     else:
-        print("Listener is not running")
+        print(f"    Listener is not running")
     if monitor.is_alive():
         monitor.join()
-        print("Monitor stopped")
+        print(f"    Monitor stopped")
     else:
-        print("Monitor is not running")
+        print(f"    Monitor is not running")
 
 
 def ending():
+    print("Ending:")
+
     # stop the motor
     motor_y.controller.stop(axis='all', immediate=True)
 
     # turn off Arduino
-    arduino.board.digital[arduino.pin].write(0)
+    arduino.stop()
     arduino.board.exit()
+
+    # close log file
+    log.close()
 
     # kill processes via PIDs
     mgpid = get_pid('MetaGuide.exe')
@@ -152,10 +160,29 @@ def ending():
 
     # end Listener, Monitor threads
     end_threads()
+
     print("Done!")
 
     sys.exit(0)
 
+async def checkmotors():
+    # Start picomotor controller 8742 communication
+    while True:
+        n = Newport.get_usb_devices_number_picomotor()
+        if n == 0:
+            print("Picomotor devices disconnected")
+            try:
+                print("Power Cycling Picomotor Controller Board, Standby")
+                os.startfile(r'C:\Users\afham\Desktop\Chas\Custom\Samples\restart_admin.bat')
+                await arduino.relay_restart()
+                print("Restart complete")
+            except Exception as e:
+                print(f"Failed to run as administrator: {e}")
+                #print('please run restartusb.py in cmd as admin')
+                await arduino.relay_restart()
+
+        #asyncio.sleep(5)
+        await asyncio.sleep(0.01)
 
 async def main():
     global listener, monitor
@@ -164,7 +191,16 @@ async def main():
     n = Newport.get_usb_devices_number_picomotor()
     if n == 0:
         print("No Picomotor devices found.")
-        return
+        await arduino.relay_restart()
+        print('Restarting Controller Via Relay switch')
+        await asyncio.sleep(3)
+        try:
+            n = Newport.get_usb_devices_number_picomotor()
+        except Exception as e:
+            print(f"Failed to reconnect to the Picomotor controller after restart: {e}")
+            return  # Exit if the reconnection fails
+
+
     if n > 0:
         print('Controller found')
     try:
@@ -176,6 +212,24 @@ async def main():
         # motor_x = PicomotorStandAlone.MotorOperations(controller, motor=2)
         # motor_y.move_by_steps(1000, stop_event=None)
         # motor_x.move_by_steps(1000, stop_event=None)
+    except ValueError as e:
+        # Check if the error message matches the expected invalid literal error
+        if "invalid literal for int() with base 10" in str(e):
+            print("Error connecting to the Picomotor controller: invalid response detected")
+            print("Attempting to restart controller via Arduino relay")
+            await arduino.relay_restart()
+
+            try:
+                controller = Newport.Picomotor8742()
+                print(controller)
+                motor_y = PicomotorStandAlone.MotorOperations(controller, arduino, motor=1)
+            except Exception as e:
+                print(f"Failed to reconnect to the Picomotor controller after restart: {e}")
+                return  # Exit if the reconnection fails
+
+        else:
+            # If it's some other ValueError, raise it again
+            raise e
     except Exception as e:
         print(f"Error connecting to the Picomotor controller: {e}")
         return
@@ -187,9 +241,18 @@ async def main():
 
     # We start with a saved MetaGuide setup file: test1.mg
     # remember to change to your own path!
-    scope_setup_path = r'C:\Users\afham\Documents\MetaGuide\fibertest1.mg'
+
+    # settings for the relay on chas
+    relay_scope_setup_path = r'C:\Users\afham\Documents\MetaGuide\relaytest1.mg'
+
+    #setting for the lenslet array on the nosecone inside of chas
+    lenslet_scope_setup_path = r'C:\Users\afham\Documents\MetaGuide\fibertest1.mg'
+
     #scope_setup_path = r'C:\Users\linz\Documents\GitHub\Picomotor-Controls-1\test1.mg'
-    os.startfile(scope_setup_path)
+
+    #os.startfile(relay_scope_setup_path)
+
+    os.startfile(lenslet_scope_setup_path)
     time.sleep(10)
 
     # To see monitoring graphs:
@@ -228,7 +291,7 @@ async def main():
 
     async def control_picomotors(delt_x, delt_y):
         # These deltas are in pixels
-        print('Server output,' + str(delt_x) + ',' + str(delt_y))
+        print('Server output:' + str(delt_x) + ',' + str(delt_y))
 
     async def receive_data():
         # Set up UDP socket to listen
@@ -257,14 +320,20 @@ async def main():
     async def starting():
         await asyncio.gather(
             motor_y.calibration_process(filename),
-            # receive_data()
         )
+
+    print("Waiting For Initialization.")
+    time.sleep(1)
+
+    while True:
+        if listener.initialized:
+            break
+        await asyncio.sleep(0.01)
 
     await starting()
 
-    #end the programs
+    # end the programs
     ending()
-
 
 
 # If using run_as_admin:
@@ -278,5 +347,33 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
+
         print("Ending:")
-        ending()
+
+        #stop the motor
+        motor_y.controller.stop(axis='all', immediate=True)
+
+        # turn off Arduino
+        arduino.stop()
+        arduino.board.exit()
+
+        #close log file
+        log.close()
+
+        # kill processes via PIDs
+        mgpid = get_pid('MetaGuide.exe')
+        apid = get_pid('ASCOM.TelescopeSimulator.exe')
+        pids_to_kill = [mgpid, apid]
+        kill_processes(pids_to_kill)
+
+        # clean ports
+        cleaner = SocketCleaner()
+        cleaner.cleanup()
+
+        # end Listener, Monitor threads
+        end_threads()
+
+
+        print("Done!")
+
+        sys.exit(0)

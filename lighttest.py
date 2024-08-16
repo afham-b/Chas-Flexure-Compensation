@@ -21,7 +21,7 @@ import asyncio
 #     time.sleep(3)
 
 class ArduinoController:
-    def __init__(self, port, light_pin, relay_pin=2):
+    def __init__(self, port, light_pin=8, relay_pin=2):
         self.board = pyfirmata.Arduino(port)
         self.pin = light_pin
         self.relay_pin = relay_pin
@@ -34,14 +34,12 @@ class ArduinoController:
 
         # default is to start with the relay closed, meaning the pico control motors are on
         # this will activate the relay switch :. turning controller board off
-        #self.board.digital[self.relay_pin].write(1)
+        self.board.digital[self.relay_pin].write(1)
         #print('Relay OFF! ')
         #time.sleep(5)
 
         #self.board.digital[self.pin].write(0)
         print('Relay ON! Picomotor Controller Powered')
-
-
 
         self.light = True  # light is true :. light is on
         self.relay = True   #the relay is open :. control board should have power
@@ -70,7 +68,7 @@ class ArduinoController:
     async def relay_off(self):
         try:
             self.board.digital[self.relay_pin].write(1)
-            await asyncio.sleep(3)
+            await asyncio.sleep(1)
             self.relay_pin = False
         except Exception as e:
             print(e)
@@ -86,15 +84,19 @@ class ArduinoController:
     async def relay_restart(self):
         try:
             await self.relay_off()
-            await asyncio.sleep(3)
-            await self.relay_on()
+            self.relay = False
+            await asyncio.sleep(1)
+            # switch will turn off for a second and power will return, no need to code ON
+            #await self.relay_on()
+            self.relay = True
         except Exception as e:
             print(e)
 
 
     def stop(self):
         self.board.digital[self.pin].write(0)
-        self.board.digital[self.relay_pin].write(0)
+        #self.board.digital[self.relay_pin].write(0)
+        self.board.exit()
         #sys.exit(0)
 
 # Example usage:
@@ -104,6 +106,8 @@ if __name__ == "__main__":
     try:
         #arduino.toggle_led(on_time=1, off_time=15)
         arduino.light_on()
+        asyncio.run(arduino.relay_off())
+        #arduino.relay_restart()
         pass
     except KeyboardInterrupt:
         arduino.stop()

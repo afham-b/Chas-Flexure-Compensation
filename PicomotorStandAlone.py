@@ -128,8 +128,8 @@ class MotorOperations:
 
         # since the real flexure we are compensating for is smooth and grows slowly
         # attempt to reject sudden jumps in offset, likely due to camera metaguide error or mechanical issue
-        if (abs(self.delt_x)-abs(self.delt_x_previous) > self.pixel_threshold
-                or abs(self.delt_y) - abs(self.delt_y_previous) > self.pixel_threshold):
+        if (abs(self.delt_x- self.delt_x_previous) >= self.pixel_threshold
+                or abs(self.delt_y - self.delt_y_previous) >= self.pixel_threshold):
             self.delt_x = self.delt_x_previous
             self.delt_y = self.delt_y_previous
             rejected = True
@@ -157,10 +157,10 @@ class MotorOperations:
 
         if abs(self.delt_x) > motion_scale_switch_point:
             self.motion_scale_x = 0.6
-            self.controller.setup_velocity(2, speed=1000, accel=800)
+            self.controller.setup_velocity(2, speed=1200, accel=800)
         if abs(self.delt_y) > motion_scale_switch_point:
             self.motion_scale_y = 0.6
-            self.controller.setup_velocity(1, speed=1000, accel=800)
+            self.controller.setup_velocity(1, speed=1200, accel=800)
 
         if abs(self.delt_x) < 4.5:
             self.controller.setup_velocity(2, speed=800, accel=800)
@@ -177,28 +177,11 @@ class MotorOperations:
         steps_y = move_y / self.step_size_y
 
         #avoid attempting to move the picomotors by a non integer number of steps
-        steps_x = math.floor(steps_x)
-        steps_y = math.floor(steps_y)
+        #steps_x = math.floor(steps_x)
+        #steps_y = math.floor(steps_y)
 
-
-        # move_x = self.delt_x * self.correction_scale
-        # move_y = self.delt_y * self.correction_scale
-        # # print(f"move_x and move_y: {move_x}, {move_y}")
-        # await asyncio.sleep(0.1)
-        #
-        # # using theta
-        # if self.theta != 0:
-        #     corrected_move_x = move_x * math.cos(self.theta) - move_y * math.sin(self.theta)
-        #     corrected_move_y = move_x * math.sin(self.theta) + move_y * math.cos(self.theta)
-        #     #print(f"with theta move_x and move_y are {corrected_move_x} , {corrected_move_y}")
-        # else:
-        #     corrected_move_x = move_x
-        #     corrected_move_y = move_y
-        #     #print(f"theta is zero, move_x and move_y are {corrected_move_x} , {corrected_move_y}")
-        #
-        # # Convert microns to steps
-        # steps_x = corrected_move_x / self.step_size
-        # steps_y = corrected_move_y / self.step_size
+        steps_x = steps_x / 1
+        steps_y = steps_y / 1
 
         # direction: invert steps for x-axis correction on microlens/lenslet array plate
         # direction: invert steps for x-axis correction on relay mirror
@@ -207,8 +190,8 @@ class MotorOperations:
         steps_y = steps_y * invert
         #print(f"Steps_x and y: {steps_x}, {steps_y}")
 
+        #y-axis motor
         self.motor = 1
-        # this only include y axis
 
         # for testing
         #print("Correction Beginning, @Line nnn")
