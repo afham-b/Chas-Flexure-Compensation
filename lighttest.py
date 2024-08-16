@@ -25,14 +25,22 @@ class ArduinoController:
         self.board = pyfirmata.Arduino(port)
         self.pin = light_pin
         self.relay_pin = relay_pin
-        time.sleep(2)  # Allow time for the board to initialize
+        time.sleep(1)  # Allow time for the board to initialize
 
         # default is to start with the light on
         self.board.digital[self.pin].write(1)
         #self.board.digital[self.relay_pin].write(1)
 
-        # default is to start with the relay on, meaning the pico control motors are on
-        self.board.digital[self.relay_pin].write(1)
+
+        # default is to start with the relay closed, meaning the pico control motors are on
+        # this will activate the relay switch :. turning controller board off
+        #self.board.digital[self.relay_pin].write(1)
+        #print('Relay OFF! ')
+        #time.sleep(5)
+
+        #self.board.digital[self.pin].write(0)
+        print('Relay ON! Picomotor Controller Powered')
+
 
 
         self.light = True  # light is true :. light is on
@@ -59,34 +67,34 @@ class ArduinoController:
         self.light = False
 
 
-    def relay_off(self):
+    async def relay_off(self):
         try:
-            self.board.digital[self.relay_pin].write(0)
+            self.board.digital[self.relay_pin].write(1)
+            await asyncio.sleep(3)
             self.relay_pin = False
         except Exception as e:
             print(e)
 
-    def relay_on(self):
+    async def relay_on(self):
         try:
-            self.board.digital[self.relay_pin].write(1)
+            self.board.digital[self.relay_pin].write(0)
+            await asyncio.sleep(3)
             self.relay_pin = True
         except Exception as e:
             print(e)
 
     async def relay_restart(self):
         try:
-            self.board.digital[self.relay_pin].write(0)
-            self.relay_pin = False
+            await self.relay_off()
             await asyncio.sleep(3)
-            self.board.digital[self.relay_pin].write(1)
-            self.relay_pin = True
+            await self.relay_on()
         except Exception as e:
             print(e)
 
 
     def stop(self):
         self.board.digital[self.pin].write(0)
-        self.board.exit()
+        self.board.digital[self.relay_pin].write(0)
         #sys.exit(0)
 
 # Example usage:

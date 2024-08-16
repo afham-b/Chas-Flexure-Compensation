@@ -54,6 +54,8 @@ log = open('pico_log.txt', 'a')
 
 global arduino
 arduino = ArduinoController('COM7', 8, 2)
+#give arduino time to initialize and switch the relay on
+time.sleep(5)
 
 def handle_client_connection(client_socket):
     while True:
@@ -168,10 +170,17 @@ async def main():
 
     # We start with a saved MetaGuide setup file: test1.mg
     # remember to change to your own path!
-    #relay_scope_setup_path = r'C:\Users\afham\Documents\MetaGuide\relaytest1.mg'
+
+    # settings for the relay on chas
+    relay_scope_setup_path = r'C:\Users\afham\Documents\MetaGuide\relaytest1.mg'
+
+    #setting for the lenslet array on the nosecone inside of chas
     lenslet_scope_setup_path = r'C:\Users\afham\Documents\MetaGuide\fibertest1.mg'
+
     #scope_setup_path = r'C:\Users\linz\Documents\GitHub\Picomotor-Controls-1\test1.mg'
+
     #os.startfile(relay_scope_setup_path)
+
     os.startfile(lenslet_scope_setup_path)
     time.sleep(10)
 
@@ -273,6 +282,7 @@ if __name__ == "__main__":
 
         # turn off Arduino
         arduino.board.digital[arduino.pin].write(0)
+        arduino.stop()
         arduino.board.exit()
 
         #close log file

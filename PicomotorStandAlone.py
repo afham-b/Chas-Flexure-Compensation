@@ -43,8 +43,8 @@ class MotorOperations:
         self.controller.setup_velocity(2, speed=close_speed, accel=1000)
 
         #used to keep track of rejection of false guide coordinates from metaguide
-        self.pixel_threshold = 150
-        self.rejection_threshold = 10
+        self.pixel_threshold = 100
+        self.rejection_threshold = 50
 
         #used to check to see if the motor is stuck, or arms are maxed out
         self.stall_count = 0
@@ -78,8 +78,8 @@ class MotorOperations:
         self.distance_lens_ccd = 83
 
         #if there is a lens on the camera use magnification calculation
-        #self.magnification = self.distance_lens_ccd / self.distance_lens_lightscourse
-        self.magnification = 1
+        self.magnification = self.distance_lens_ccd / self.distance_lens_lightscourse
+        #self.magnification = 1
 
         # pixel size (micrometer) can be found on camera specifications sheet
         # for asi290mini pixel size is 2.9 microns/px
@@ -124,13 +124,15 @@ class MotorOperations:
         #vars used to keep track for previous deltas, which are assigned at the end of the control picomotors function
         x_pre = self.delt_x
         y_pre = self.delt_y
+        rejected = False
 
         # since the real flexure we are compensating for is smooth and grows slowly
         # attempt to reject sudden jumps in offset, likely due to camera metaguide error or mechanical issue
         if (abs(self.delt_x)-abs(self.delt_x_previous) > self.pixel_threshold
-                or abs(self.delt_y) - abs(self.delt_y_previous) > 150):
+                or abs(self.delt_y) - abs(self.delt_y_previous) > self.pixel_threshold):
             self.delt_x = self.delt_x_previous
             self.delt_y = self.delt_y_previous
+            rejected = True
             print("REJECTED")
 
         print('control_picomotors output (x,y): ' + str(round(self.delt_x, 4)) + ', ' + str(round(self.delt_y, 4)))
@@ -201,8 +203,8 @@ class MotorOperations:
         # direction: invert steps for x-axis correction on microlens array plate
         # direction: invert steps for x-axis correction on mirror plate
         invert = -1
-        #steps_x = steps_x * invert
-        #steps_y = steps_y * invert
+        steps_x = steps_x * invert
+        steps_y = steps_y * invert
         #print(f"Steps_x and y: {steps_x}, {steps_y}")
 
         self.motor = 1
@@ -254,17 +256,18 @@ class MotorOperations:
         #if abs(self.delt_x) > self.margin_of_error and abs(self.delt_y) > self.margin_of_error:
         #    self.controller.stop(axis='all', immediate=True)
 
-        # if self.delt_x > self.margin_of_error or self.delt_y > self.margin_of_error:
-        #     if abs(self.delt_x - self.delt_x_previous) < self.stall_threshold or abs(
-        #         self.delt_y - self.delt_y_previous) < self.stall_threshold:
-        #         self.stall_count += 1
-        #     if self.stall_count > self.max_stall_count:
-        #         print("Motor is stalling. Resetting...")
-        # else:
-        #     self.stall_count = 0
+        if self.delt_x > self.margin_of_error or self.delt_y > self.margin_of_error:
+            if abs(self.delt_x - self.delt_x_previous) < self.stall_threshold or abs(
+                self.delt_y - self.delt_y_previous) < self.stall_threshold:
+                self.stall_count += 1
+            if self.stall_count > self.max_stall_count:
+                print("Motor is stalling. Resetting...")
+        else:
+            self.stall_count = 0
 
-        self.delt_x_previous = x_pre
-        self.delt_y_previous = y_pre
+        if rejected == False:
+            self.delt_x_previous = x_pre
+            self.delt_y_previous = y_pre
 
 
     async def calibration_data_stream(self):
