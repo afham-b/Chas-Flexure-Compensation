@@ -33,6 +33,8 @@ if sys.version_info < (3, 0):
     print("This code requires Python Version 3")
     sys.exit(-1)
 
+inits = open('inits_log.txt', 'a')
+
 class MGListener(threading.Thread):
     """
     Listens to data messages from MetaGuide broadcast over UDP.
@@ -351,7 +353,10 @@ class MyListener(MGListener):
         self.x_init = self.x
         self.y_init = self.y
 
+        inits.write('\n initials pixels (x,y): ' + str(round(self.x_init, 4)) + ', ' + str(round(self.y_init, 4)))
+
         self.initialized = True
+
         #print("Initial X, Y of the star are: ", self.x_init, self.y_init)
 
 
@@ -364,8 +369,9 @@ class MyListener(MGListener):
 
         # Send delt_x and delt_y
         message = f'{delta_x},{delta_y},{self.x_init},{self.y_init}'
-        XY_sock.sendto(message.encode(), server_address)
-        Pico_sock.sendto(message.encode(), pico_server_address)
+        if self.x != -1:
+            XY_sock.sendto(message.encode(), server_address)
+            Pico_sock.sendto(message.encode(), pico_server_address)
 
 class MGMonitor(threading.Thread):
     """

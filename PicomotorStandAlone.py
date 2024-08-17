@@ -33,8 +33,8 @@ class MotorOperations:
         self.calibrated = 0
         self.x_init = 0
         self.y_init = 0
-        self.delt_x_previous = 0
-        self.delt_y_previous = 0
+        self.delt_x_previous = -1
+        self.delt_y_previous = -1
         self.delt_x = 0
         self.delt_y = 0
         self.theta = 0
@@ -100,7 +100,7 @@ class MotorOperations:
 
         #relay
         self.motion_scale_y = 0.8
-        self.motion_scale_x = 0.8
+        self.motion_scale_x = 0.5
 
 
         # the pico motor moves 20 nm per step, adjust this value based on the mas the motor moves
@@ -113,8 +113,8 @@ class MotorOperations:
         # self.step_size_x = 0.015
 
         #relay
-        self.step_size_y = 0.015
-        self.step_size_x = 0.015
+        self.step_size_y = 0.010
+        self.step_size_x = 0.020
 
         # how close we want the picomotor to try to get to the home position
         self.margin_of_error = 2
@@ -128,12 +128,15 @@ class MotorOperations:
 
         # since the real flexure we are compensating for is smooth and grows slowly
         # attempt to reject sudden jumps in offset, likely due to camera metaguide error or mechanical issue
-        if (abs(self.delt_x- self.delt_x_previous) >= self.pixel_threshold
-                or abs(self.delt_y - self.delt_y_previous) >= self.pixel_threshold):
-            self.delt_x = self.delt_x_previous
-            self.delt_y = self.delt_y_previous
-            rejected = True
-            print("REJECTED")
+
+        if self.delt_x_previous != -1 and self.delt_y_previous != -1:
+            if (abs(self.delt_x - self.delt_x_previous) >= self.pixel_threshold
+                    or abs(self.delt_y - self.delt_y_previous) >= self.pixel_threshold):
+                self.delt_x = self.delt_x_previous
+                self.delt_y = self.delt_y_previous
+                rejected = True
+                print("REJECTED")
+
 
         print('control_picomotors output (x,y): ' + str(round(self.delt_x, 4)) + ', ' + str(round(self.delt_y, 4)))
 
@@ -157,15 +160,19 @@ class MotorOperations:
 
         if abs(self.delt_x) > motion_scale_switch_point:
             self.motion_scale_x = 0.6
-            self.controller.setup_velocity(2, speed=1200, accel=800)
+            self.controller.setup_velocity(2, speed=1200)
+            #self.controller.setup_velocity(2, speed=1200, accel=800)
         if abs(self.delt_y) > motion_scale_switch_point:
             self.motion_scale_y = 0.6
-            self.controller.setup_velocity(1, speed=1200, accel=800)
+            self.controller.setup_velocity(1, speed=1200)
+            #self.controller.setup_velocity(1, speed=1200, accel=800)
 
         if abs(self.delt_x) < 4.5:
-            self.controller.setup_velocity(2, speed=800, accel=800)
+            self.controller.setup_velocity(2, speed=500)
+            #self.controller.setup_velocity(2, speed=800, accel=800)
         if abs(self.delt_y) < 4.5:
-            self.controller.setup_velocity(1, speed=800, accel=800)
+            self.controller.setup_velocity(1, speed=500) # or speed 800
+            #self.controller.setup_velocity(1, speed=800, accel=800)
 
         correction_scale_x = self.effective_pixel_size * self.motion_scale_x
         correction_scale_y = self.effective_pixel_size * self.motion_scale_y
@@ -212,16 +219,16 @@ class MotorOperations:
             #print('stopped motion y')
             await asyncio.sleep(0.001)
 
-        await asyncio.sleep(0.001)
-        moving = True
-        while moving:
-            try:
-                moving = self.controller.is_moving(self.motor)
-                if not moving:
-                    break
-            except Exception as e:
-                print(f"Error checking if motor is moving: {e}")
-                await asyncio.sleep(0.001)
+        await asyncio.sleep(0.01)
+        # moving = True
+        # while moving:
+        #     try:
+        #         moving = self.controller.is_moving(self.motor)
+        #         if not moving:
+        #             break
+        #     except Exception as e:
+        #         print(f"Error checking if motor is moving: {e}")
+        #         await asyncio.sleep(0.001)
 
         self.motor = 2
         # x axis motor
@@ -342,10 +349,27 @@ class MotorOperations:
         for file, data in self.calibration_data.items():
             print(f"    {file}: \n          Theta: {data['theta']}    \n          Time: {data['timestamp']}")
 
+        first_input = True
+
         while True:
             data, _ = pico_sock.recvfrom(4096)  # Buffer size
             self.delt_x, self.delt_y, self.x_init, self.y_init = map(float, data.decode().split(','))
             #print('Socket data received: ' + str(self.delt_x) + str(self.delt_y))
+
+            if first_input and self.x_init and self.y_init:
+                print("Setting Reference Position, Please Wait")
+                #position_y = self.controller.get_position(1)
+                #position_x = self.controller.get_position(2)
+                #await self.set_position_reference(position_y)
+                #self.motor = 2
+                #await self.set_position_reference(position_x)
+
+                #this sets the current position as position '0' for both motors
+                self.motor = 1
+                await self.set_position_reference(position=0)
+                self.motor = 2
+                await self.set_position_reference(position=0)
+                first_input = False
 
             #await asyncio.sleep(0.01)
             #print('X is : ' + str(self.delt_x+self.x_init))
