@@ -353,7 +353,7 @@ class MyListener(MGListener):
         self.x_init = self.x
         self.y_init = self.y
 
-        inits.write('\n initials pixels (x,y): ' + str(round(self.x_init, 4)) + ', ' + str(round(self.y_init, 4)))
+        inits.write('initials pixels (x,y): ' + str(round(self.x_init, 4)) + ', ' + str(round(self.y_init, 4)))
 
         self.initialized = True
 
@@ -369,7 +369,7 @@ class MyListener(MGListener):
 
         # Send delt_x and delt_y
         message = f'{delta_x},{delta_y},{self.x_init},{self.y_init}'
-        if self.x != -1:
+        if self.x != -1 and self.initialized:
             XY_sock.sendto(message.encode(), server_address)
             Pico_sock.sendto(message.encode(), pico_server_address)
 

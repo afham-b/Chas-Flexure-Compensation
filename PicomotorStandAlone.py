@@ -50,7 +50,7 @@ class MotorOperations:
         #used to check to see if the motor is stuck, or arms are maxed out
         self.stall_count = 0
         self.stall_threshold = 0.3
-        self.max_stall_count = 50
+        self.max_stall_count = 200
 
         self.calibration_files = ['calibration_data.txt', 'calibration_data_nosecone.txt']
         self.calibration_data = {file: {'theta': None, 'timestamp': None} for file in self.calibration_files}
@@ -254,11 +254,31 @@ class MotorOperations:
             if abs(self.delt_x - self.delt_x_previous) > self.stall_threshold or abs(
                 self.delt_y - self.delt_y_previous) > self.stall_threshold:
                 self.stall_count += 1
+            else:
+                self.stall_count = 0
             if self.stall_count > self.max_stall_count:
                 print("Motor is stalling. Resetting...")
-                #put in stalling code here, i.e return motor to home after and relay restart
-        else:
-            self.stall_count = 0
+                try:
+                    # put in stalling code here, i.e return motor to home after and relay restart
+                    # return motor arms to intial positions
+                    self.motor = 1
+                    await self.move_to_position(0)
+                    self.motor = 2
+                    await self.move_to_position(0)
+                except ValueError as e:
+                    if "invalid literal for int() with base 10" in str(e):
+                        print("Error connecting to the Picomotor controller: invalid response detected")
+                        print("Attempting to restart controller via Arduino relay")
+                        await self.arduino.relay_restart()
+                        try:
+                            self.controller = Newport.Picomotor8742()
+                            self.motor = 1
+                            await self.move_to_position(0)
+                            self.motor = 2
+                            await self.move_to_position(0)
+                        except Exception as e:
+                            print(f"Failed to reconnect to the Picomotor controller after restart: {e}")
+                            #return  # Exit if the reconnection fails
 
         if not rejected:
             self.rejection_count = 0
