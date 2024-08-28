@@ -44,7 +44,8 @@ class MotorOperations:
 
         #used to keep track of rejection of false guide coordinates from metaguide
         self.pixel_threshold = 100
-        self.rejection_threshold = 50
+        self.rejection_count = 0
+        self.rejection_threshold = 200
 
         #used to check to see if the motor is stuck, or arms are maxed out
         self.stall_count = 0
@@ -129,14 +130,17 @@ class MotorOperations:
         # since the real flexure we are compensating for is smooth and grows slowly
         # attempt to reject sudden jumps in offset, likely due to camera metaguide error or mechanical issue
 
-        if self.delt_x_previous != -1 and self.delt_y_previous != -1:
+        if self.delt_x_previous != -1 and self.delt_y_previous != -1 and self.rejection_count < self.rejection_threshold:
             if (abs(self.delt_x - self.delt_x_previous) >= self.pixel_threshold
                     or abs(self.delt_y - self.delt_y_previous) >= self.pixel_threshold):
                 self.delt_x = self.delt_x_previous
                 self.delt_y = self.delt_y_previous
                 rejected = True
+                self.rejection_count = self.rejection_count + 1
                 print("REJECTED")
 
+        if self.rejection_count > self.rejection_threshold:
+            print("significant shift above normal threshold measured, Correcting")
 
         print('control_picomotors output (x,y): ' + str(round(self.delt_x, 4)) + ', ' + str(round(self.delt_y, 4)))
 
@@ -257,6 +261,7 @@ class MotorOperations:
             self.stall_count = 0
 
         if not rejected:
+            self.rejection_count = 0
             self.delt_x_previous = x_pre
             self.delt_y_previous = y_pre
 
