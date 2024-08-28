@@ -308,6 +308,9 @@ if __name__ == "__main__":
         #stop the motor
         motor_y.controller.stop(axis='all', immediate=True)
 
+        #counter the steps here
+        motor_y.counter_steps()
+
         # turn off Arduino
         arduino.stop()
         arduino.board.exit()

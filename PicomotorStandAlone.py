@@ -30,6 +30,9 @@ class MotorOperations:
         self.close_speed = close_speed
         self.very_close_speed = very_close_speed
         self.set_velocity(self.default_speed, acceleration=10000)
+
+        # steps for motor 1, 2, 3, 4
+        self.motor_steps = [0, 0, 0, 0]
         self.calibrated = 0
         self.x_init = 0
         self.y_init = 0
@@ -193,6 +196,11 @@ class MotorOperations:
 
         steps_x = steps_x / 1
         steps_y = steps_y / 1
+
+        # for the lenslet array
+        self.motor_steps[0] += steps_y  # Motor 1 (Y-axis)
+        self.motor_steps[1] += steps_x  # Motor 2 (X-axis)
+
 
         # direction: invert steps for x-axis correction on microlens/lenslet array plate
         # direction: invert steps for x-axis correction on relay mirror
@@ -408,6 +416,14 @@ class MotorOperations:
 
     def set_velocity(self, speed, acceleration=10000):
         self.controller.setup_velocity(self.motor, speed=speed, accel=acceleration)
+
+    # move the motors counter to the total integrated amount of steps at the end of the correction
+    async def counter_steps(self):
+        # Loop through the motor numbers (1 to 4) and their respective step counts
+        for i in range(4):
+            self.motor = i + 1  # Set motor to the current motor number
+            motor_counter_steps = -1 * self.motor_steps[i]  # Calculate counter steps
+            await self.move_by_steps(motor_counter_steps)  # Move the motor by the counter steps
 
     async def get_position(self):
         while True:
