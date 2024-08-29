@@ -1,1 +1,1 @@
-initials pixels (x,y): 953.7, 503.6
+initials pixels (x,y): 953.7, 503.6initials pixels (x,y): 319.8, 14.4initials pixels (x,y): 1053.9, 535.1initials pixels (x,y): 1055.6, 232.2initials pixels (x,y): 986.4, 483.1initials pixels (x,y): 992.0, 520.6initials pixels (x,y): 996.4, 452.1initials pixels (x,y): 1050.8, 485.4

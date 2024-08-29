@@ -305,33 +305,40 @@ if __name__ == "__main__":
 
         print("Ending:")
 
-        #stop the motor
-        motor_y.controller.stop(axis='all', immediate=True)
 
-        #counter the steps here
-        motor_y.counter_steps()
+        # Define an async function to handle async calls
+        async def shutdown_sequence():
+            # Stop the motor
+            motor_y.controller.stop(axis='all', immediate=True)
 
-        # turn off Arduino
-        arduino.stop()
-        arduino.board.exit()
+            await asyncio.sleep(0.5)
 
-        #close log file
-        log.close()
+            # Wait for the async function to complete
+            await motor_y.counter_steps()
 
-        # kill processes via PIDs
-        mgpid = get_pid('MetaGuide.exe')
-        apid = get_pid('ASCOM.TelescopeSimulator.exe')
-        pids_to_kill = [mgpid, apid]
-        kill_processes(pids_to_kill)
+            # Turn off Arduino
+            arduino.stop()
+            arduino.board.exit()
 
-        # clean ports
-        cleaner = SocketCleaner()
-        cleaner.cleanup()
+            # Close log file
+            log.close()
 
-        # end Listener, Monitor threads
-        end_threads()
+            # Kill processes via PIDs
+            mgpid = get_pid('MetaGuide.exe')
+            apid = get_pid('ASCOM.TelescopeSimulator.exe')
+            pids_to_kill = [mgpid, apid]
+            kill_processes(pids_to_kill)
 
+            # Clean ports
+            cleaner = SocketCleaner()
+            cleaner.cleanup()
 
-        print("Done!")
+            # End Listener, Monitor threads
+            end_threads()
+
+            print("Done!")
+
+        # Run the async shutdown sequence
+        asyncio.run(shutdown_sequence())
 
         sys.exit(0)

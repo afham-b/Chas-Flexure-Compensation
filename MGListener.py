@@ -368,10 +368,14 @@ class MyListener(MGListener):
         #print("%s : %s"%(self.msg, self.msgtxt))
 
         # Send delt_x and delt_y
-        message = f'{delta_x},{delta_y},{self.x_init},{self.y_init}'
-        if self.x != -1 and self.initialized:
-            XY_sock.sendto(message.encode(), server_address)
-            Pico_sock.sendto(message.encode(), pico_server_address)
+        message = f'{delta_x},{delta_y},{self.x},{self.y}'
+
+        # if self.x != -1 and self.initialized:
+        #     XY_sock.sendto(message.encode(), server_address)
+        #     Pico_sock.sendto(message.encode(), pico_server_address)
+
+        XY_sock.sendto(message.encode(), server_address)
+        Pico_sock.sendto(message.encode(), pico_server_address)
 
 class MGMonitor(threading.Thread):
     """

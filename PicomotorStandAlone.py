@@ -34,6 +34,8 @@ class MotorOperations:
         # steps for motor 1, 2, 3, 4
         self.motor_steps = [0, 0, 0, 0]
         self.calibrated = 0
+        self.x = -1
+        self.y = 0
         self.x_init = 0
         self.y_init = 0
         self.delt_x_previous = -1
@@ -47,6 +49,7 @@ class MotorOperations:
 
         #used to keep track of rejection of false guide coordinates from metaguide
         self.pixel_threshold = 100
+        self.rejected = False
         self.rejection_count = 0
         self.rejection_threshold = 200
 
@@ -128,17 +131,16 @@ class MotorOperations:
         #vars used to keep track for previous deltas, which are assigned at the end of the control picomotors function
         x_pre = self.delt_x
         y_pre = self.delt_y
-        rejected = False
 
         # since the real flexure we are compensating for is smooth and grows slowly
         # attempt to reject sudden jumps in offset, likely due to camera metaguide error or mechanical issue
 
-        if self.delt_x_previous != -1 and self.delt_y_previous != -1 and self.rejection_count < self.rejection_threshold:
+        if self.delt_x_previous != -1 and self.rejection_count < self.rejection_threshold:
             if (abs(self.delt_x - self.delt_x_previous) >= self.pixel_threshold
                     or abs(self.delt_y - self.delt_y_previous) >= self.pixel_threshold):
                 self.delt_x = self.delt_x_previous
                 self.delt_y = self.delt_y_previous
-                rejected = True
+                self.rejected = True
                 self.rejection_count = self.rejection_count + 1
                 print("REJECTED")
 
@@ -167,18 +169,20 @@ class MotorOperations:
 
         if abs(self.delt_x) > motion_scale_switch_point:
             self.motion_scale_x = 0.6
-            self.controller.setup_velocity(2, speed=1200)
+            await self.change_velocity(2, 1200)
             #self.controller.setup_velocity(2, speed=1200, accel=800)
+
         if abs(self.delt_y) > motion_scale_switch_point:
             self.motion_scale_y = 0.6
-            self.controller.setup_velocity(1, speed=1200)
+            await self.change_velocity(1, 1200)
             #self.controller.setup_velocity(1, speed=1200, accel=800)
 
         if abs(self.delt_x) < 4.5:
-            self.controller.setup_velocity(2, speed=500)
+            await self.change_velocity(2, 500)
             #self.controller.setup_velocity(2, speed=800, accel=800)
+
         if abs(self.delt_y) < 4.5:
-            self.controller.setup_velocity(1, speed=500) # or speed 800
+            await self.change_velocity(1, 500)
             #self.controller.setup_velocity(1, speed=800, accel=800)
 
         correction_scale_x = self.effective_pixel_size * self.motion_scale_x
@@ -196,10 +200,6 @@ class MotorOperations:
 
         steps_x = steps_x / 1
         steps_y = steps_y / 1
-
-        # for the lenslet array
-        self.motor_steps[0] += steps_y  # Motor 1 (Y-axis)
-        self.motor_steps[1] += steps_x  # Motor 2 (X-axis)
 
 
         # direction: invert steps for x-axis correction on microlens/lenslet array plate
@@ -231,7 +231,7 @@ class MotorOperations:
             #print('stopped motion y')
             await asyncio.sleep(0.001)
 
-        await asyncio.sleep(0.01)
+        await asyncio.sleep(0.001)
         # moving = True
         # while moving:
         #     try:
@@ -288,16 +288,30 @@ class MotorOperations:
                             print(f"Failed to reconnect to the Picomotor controller after restart: {e}")
                             #return  # Exit if the reconnection fails
 
-        if not rejected:
+        if not self.rejected:
             self.rejection_count = 0
             self.delt_x_previous = x_pre
             self.delt_y_previous = y_pre
 
+    async def change_velocity(self, motor, speed):
+        try:
+            self.controller.setup_velocity(motor, speed=speed)
+        except ValueError as e:
+            # Check if the error message matches the expected invalid literal error
+            if "invalid literal for int() with base 10" in str(e):
+                print("Error connecting to the Picomotor controller: invalid response detected")
+                try:
+                    self.controller.setup_velocity(motor, speed=speed)
+                except Exception as e:
+                    print("Error Setting velocity, passed")
+                    pass
+        await asyncio.sleep(0.001)
+        return
 
     async def calibration_data_stream(self):
         while True:
             data, _ = pico_sock.recvfrom(4096)  # Buffer size
-            self.delt_x, self.delt_y, self.x_init, self.y_init= map(float, data.decode().split(','))
+            self.delt_x, self.delt_y, self.x, self.y = map(float, data.decode().split(','))
             if self.calibrated == 1:
                 break
             await asyncio.sleep(0.01)
@@ -386,10 +400,10 @@ class MotorOperations:
 
         while True:
             data, _ = pico_sock.recvfrom(4096)  # Buffer size
-            self.delt_x, self.delt_y, self.x_init, self.y_init = map(float, data.decode().split(','))
+            self.delt_x, self.delt_y, self.x, self.y = map(float, data.decode().split(','))
             #print('Socket data received: ' + str(self.delt_x) + str(self.delt_y))
 
-            if first_input and self.x_init and self.y_init:
+            if first_input and self.x and self.y:
                 print("Setting Reference Position, Please Wait")
                 #position_y = self.controller.get_position(1)
                 #position_x = self.controller.get_position(2)
@@ -404,10 +418,23 @@ class MotorOperations:
                 await self.set_position_reference(position=0)
                 first_input = False
 
+                break
+
+            await asyncio.sleep(0.001)
+
+
+
+        while True:
+            data, _ = pico_sock.recvfrom(4096)  # Buffer size
+            self.delt_x, self.delt_y, self.x, self.y = map(float, data.decode().split(','))
+            # print('Socket data received: ' + str(self.delt_x) + str(self.delt_y))
+
             #await asyncio.sleep(0.01)
             #print('X is : ' + str(self.delt_x+self.x_init))
-            if (self.delt_x+self.x_init) != -1.00 and self.arduino.light:
-            #if (self.delt_x+self.x_init) != -1.00 :
+            # print ('X is : ' + str(self.x))
+
+            #if self.x != -1.00 and self.arduino.light:
+            if self.x != -1.00:
                 await self.control_picomotors()
 
             #await self.control_picomotors()
@@ -420,10 +447,17 @@ class MotorOperations:
     # move the motors counter to the total integrated amount of steps at the end of the correction
     async def counter_steps(self):
         # Loop through the motor numbers (1 to 4) and their respective step counts
-        for i in range(4):
-            self.motor = i + 1  # Set motor to the current motor number
-            motor_counter_steps = -1 * self.motor_steps[i]  # Calculate counter steps
-            await self.move_by_steps(motor_counter_steps)  # Move the motor by the counter steps
+
+        n = Newport.get_usb_devices_number_picomotor()
+        if n == 0:
+            return
+
+        print(self.motor_steps)
+
+        # for i in range(4):
+        #     self.motor = i + 1  # Set motor to the current motor number
+        #     motor_counter_steps = -1 * self.motor_steps[i]  # Calculate counter steps
+        #     await self.move_by_steps(motor_counter_steps)  # Move the motor by the counter steps
 
     async def get_position(self):
         while True:
@@ -450,6 +484,8 @@ class MotorOperations:
         Move by a number of steps.
         """
         self.controller.move_by(self.motor, steps)
+
+        self.motor_steps[self.motor-1] += steps
 
         start_time = time.time()
         timeout = 10  # Timeout in n seconds
@@ -485,7 +521,7 @@ class MotorOperations:
     async def set_position_reference(self, position=0):
         # Set the current position as the reference position
         self.controller.set_position_reference(self.motor, position)
-        await asyncio.sleep(3)  # Small delay to ensure the command is processed
+        await asyncio.sleep(0.5)  # Small delay to ensure the command is processed
 
     async def perform_operations(self, stop_event=None, distance=0.02):
         print(f'Motor {self.motor}')
