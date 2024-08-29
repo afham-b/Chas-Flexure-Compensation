@@ -58,6 +58,15 @@ class MotorOperations:
         self.stall_threshold = 0.3
         self.max_stall_count = 200
 
+        # Initialize variables to keep track of the previous range
+        self.prev_delt_x_range = None
+        self.prev_delt_y_range = None
+        # Determine the current range for delt_x and delt_y
+        self.current_delt_x_range = None
+        self. current_delt_y_range = None
+        self.range_breakpoint1 = 4.5
+        self.range_breakpoint2 = 10
+
         self.calibration_files = ['calibration_data.txt', 'calibration_data_nosecone.txt']
         self.calibration_data = {file: {'theta': None, 'timestamp': None} for file in self.calibration_files}
         self.read_calibration_data()
@@ -126,6 +135,14 @@ class MotorOperations:
         # how close we want the picomotor to try to get to the home position
         self.margin_of_error = 2
 
+    def get_range(self, delta):
+        if delta < self.range_breakpoint1:
+            return 1  # Range 1: 0 <= |delta| < 4.5
+        elif self.range_breakpoint1 <= delta <= self.range_breakpoint2:
+            return 2  # Range 2: 4.5 <= |delta| <= 10
+        else:
+            return 3  # Range 3: |delta| > 10
+
     async def control_picomotors(self):
 
         #vars used to keep track for previous deltas, which are assigned at the end of the control picomotors function
@@ -164,26 +181,29 @@ class MotorOperations:
         # corrected_delta_x = self.delt_x
         # corrected_delta_y = self.delt_y
 
-        # n pixels where motion scales need to be dynamic (i.e big steps need to reduce overshooting)
-        motion_scale_switch_point = 10.0
+        # Determine the current range for delt_x and delt_y
+        current_delt_x_range = self.get_range(self.delt_x)
+        current_delt_y_range = self.get_range(self.delt_y)
 
-        if abs(self.delt_x) > motion_scale_switch_point:
-            self.motion_scale_x = 0.6
-            await self.change_velocity(2, 1200)
-            #self.controller.setup_velocity(2, speed=1200, accel=800)
+        # Check if the range for delt_x has changed
+        if current_delt_x_range != self.prev_delt_x_range:
+            if current_delt_x_range == 1:
+                await self.change_velocity(2, 500)  # Set velocity for range 1
+            elif current_delt_x_range == 2:
+                await self.change_velocity(2, 1200)  # Set velocity for range 2
+            elif current_delt_x_range == 3:
+                await self.change_velocity(2, 1500)  # Example: Set velocity for range 3
+            self.prev_delt_x_range = current_delt_x_range  # Update previous range
 
-        if abs(self.delt_y) > motion_scale_switch_point:
-            self.motion_scale_y = 0.6
-            await self.change_velocity(1, 1200)
-            #self.controller.setup_velocity(1, speed=1200, accel=800)
+        if current_delt_y_range != self.prev_delt_y_range:
+            if current_delt_x_range == 1:
+                await self.change_velocity(1, 500)  # Set velocity for range 1
+            elif current_delt_x_range == 2:
+                await self.change_velocity(1, 1200)  # Set velocity for range 2
+            elif current_delt_x_range == 3:
+                await self.change_velocity(1, 1500)  # Example: Set velocity for range 3
+            self.prev_delt_x_range = current_delt_x_range  # Update previous range
 
-        if abs(self.delt_x) < 4.5:
-            await self.change_velocity(2, 500)
-            #self.controller.setup_velocity(2, speed=800, accel=800)
-
-        if abs(self.delt_y) < 4.5:
-            await self.change_velocity(1, 500)
-            #self.controller.setup_velocity(1, speed=800, accel=800)
 
         correction_scale_x = self.effective_pixel_size * self.motion_scale_x
         correction_scale_y = self.effective_pixel_size * self.motion_scale_y
