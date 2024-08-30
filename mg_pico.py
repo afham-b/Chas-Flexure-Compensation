@@ -316,7 +316,7 @@ if __name__ == "__main__":
             # Wait for the async function to complete
             await motor_y.counter_steps()
 
-            # Turn off Arduino
+            # Turn off Arduino-
             arduino.stop()
             arduino.board.exit()
 

@@ -15,10 +15,11 @@ server_address = ('127.0.0.1', 5002)  # Use the same address and port as MGListe
 pico_sock.bind(server_address)
 
 # file name of the calibration data
-filename = 'calibration_data.txt' # microlens lenslets
+filename = 'calibration_data.txt'  # microlens lenslets
 #filename = 'calibration_data_nosecone.txt' #nosecone relay
 
 log = open('pico_log.txt', 'a')
+
 
 class MotorOperations:
     def __init__(self, controller, arduino, motor, default_speed=1750, close_speed=1000, very_close_speed=40):
@@ -44,8 +45,8 @@ class MotorOperations:
         self.delt_y = 0
         self.theta = 0
 
-        self.controller.setup_velocity(1, speed=close_speed, accel=800)
-        self.controller.setup_velocity(2, speed=close_speed, accel=800)
+        self.controller.setup_velocity(1, speed=default_speed, accel=200000)
+        self.controller.setup_velocity(2, speed=default_speed, accel=200000)
 
         #used to keep track of rejection of false guide coordinates from metaguide
         self.pixel_threshold = 100
@@ -55,23 +56,22 @@ class MotorOperations:
 
         #used to check to see if the motor is stuck, or arms are maxed out
         self.stall_count = 0
-        self.stall_threshold = 0.3
-        self.max_stall_count = 200
+        self.stall_threshold = 0.2
+        self.max_stall_count = 100
 
         # Initialize variables to keep track of the previous range
         self.prev_delt_x_range = None
         self.prev_delt_y_range = None
         # Determine the current range for delt_x and delt_y
         self.current_delt_x_range = None
-        self. current_delt_y_range = None
+        self.current_delt_y_range = None
         self.range_breakpoint1 = 4.5
-        self.range_breakpoint2 = 10
+        self.range_breakpoint2 = 15
+        self.range_breakpoint3 = 50
 
         self.calibration_files = ['calibration_data.txt', 'calibration_data_nosecone.txt']
         self.calibration_data = {file: {'theta': None, 'timestamp': None} for file in self.calibration_files}
         self.read_calibration_data()
-
-
 
         # when instance is initialized, retrieve the theta value from calibration_data.txt
         with open(filename, 'r') as file:
@@ -81,17 +81,15 @@ class MotorOperations:
                 self.theta = 0
                 raise ValueError("The Calibration Data File is empty. Check File or Calibrate")
 
-
             # Get the latest theta value (last line)
             latest_theta = float(lines[-1].strip())
 
             self.theta = latest_theta
 
-
         # measure and modify the two parameters below for your magnification
         # distance in mm
-        self.distance_lens_lightscourse = 118
-        self.distance_lens_ccd = 83
+        self.distance_lens_lightscourse = 106
+        self.distance_lens_ccd = 116
 
         #if there is a lens on the camera use magnification calculation
         self.magnification = self.distance_lens_ccd / self.distance_lens_lightscourse
@@ -115,9 +113,8 @@ class MotorOperations:
         # self.motion_scale_x = 0.8
 
         #relay
-        self.motion_scale_y = 0.8
-        self.motion_scale_x = 0.5
-
+        self.motion_scale_y = 0.75
+        self.motion_scale_x = 0.75
 
         # the pico motor moves 20 nm per step, adjust this value based on the mas the motor moves
         #self.step_size = 0.02
@@ -129,19 +126,21 @@ class MotorOperations:
         # self.step_size_x = 0.015
 
         #relay
-        self.step_size_y = 0.010
-        self.step_size_x = 0.020
+        self.step_size_y = 0.015
+        self.step_size_x = 0.015
 
         # how close we want the picomotor to try to get to the home position
         self.margin_of_error = 2
 
     def get_range(self, delta):
-        if delta < self.range_breakpoint1:
+        if abs(delta) < self.range_breakpoint1:
             return 1  # Range 1: 0 <= |delta| < 4.5
-        elif self.range_breakpoint1 <= delta <= self.range_breakpoint2:
+        elif self.range_breakpoint1 <= abs(delta) <= self.range_breakpoint2:
             return 2  # Range 2: 4.5 <= |delta| <= 10
+        elif self.range_breakpoint2 <= abs(delta) <= self.range_breakpoint3:
+            return 3  # Range 3: 10 <= |delta| < 50
         else:
-            return 3  # Range 3: |delta| > 10
+            return 4  # Range 4:  |delta| > 50
 
     async def control_picomotors(self):
 
@@ -160,13 +159,15 @@ class MotorOperations:
                 self.rejected = True
                 self.rejection_count = self.rejection_count + 1
                 print("REJECTED")
+                return
 
         if self.rejection_count > self.rejection_threshold:
             print("significant shift above normal threshold measured, Correcting")
 
         print('control_picomotors output (x,y): ' + str(round(self.delt_x, 4)) + ', ' + str(round(self.delt_y, 4)))
 
-        log.write('\n' + str(datetime.now()) + '    ' + 'control_picomotors output (x,y): ' + str(round(self.delt_x, 4)) + ', ' + str(round(self.delt_y, 4)))
+        log.write('\n' + str(datetime.now()) + '    ' + 'control_picomotors output (x,y): ' + str(
+            round(self.delt_x, 4)) + ', ' + str(round(self.delt_y, 4)))
 
         # using theta correction
         if self.theta != 0:
@@ -178,8 +179,8 @@ class MotorOperations:
             corrected_delta_y = self.delt_y
 
         # not using theta correction
-        # corrected_delta_x = self.delt_x
-        # corrected_delta_y = self.delt_y
+        #corrected_delta_x = self.delt_x
+        #corrected_delta_y = self.delt_y
 
         # Determine the current range for delt_x and delt_y
         current_delt_x_range = self.get_range(self.delt_x)
@@ -190,20 +191,23 @@ class MotorOperations:
             if current_delt_x_range == 1:
                 await self.change_velocity(2, 500)  # Set velocity for range 1
             elif current_delt_x_range == 2:
-                await self.change_velocity(2, 1200)  # Set velocity for range 2
+                await self.change_velocity(2, 800)  # Set velocity for range 2
             elif current_delt_x_range == 3:
-                await self.change_velocity(2, 1500)  # Example: Set velocity for range 3
+                await self.change_velocity(2, 1200)  # Example: Set velocity for range 3
+            elif current_delt_x_range == 4:
+                await self.change_velocity(2, 1700)
             self.prev_delt_x_range = current_delt_x_range  # Update previous range
 
         if current_delt_y_range != self.prev_delt_y_range:
-            if current_delt_x_range == 1:
+            if current_delt_y_range == 1:
                 await self.change_velocity(1, 500)  # Set velocity for range 1
-            elif current_delt_x_range == 2:
-                await self.change_velocity(1, 1200)  # Set velocity for range 2
-            elif current_delt_x_range == 3:
-                await self.change_velocity(1, 1500)  # Example: Set velocity for range 3
-            self.prev_delt_x_range = current_delt_x_range  # Update previous range
-
+            elif current_delt_y_range == 2:
+                await self.change_velocity(1, 800)  # Set velocity for range 2
+            elif current_delt_y_range == 3:
+                await self.change_velocity(1, 1200)  # Example: Set velocity for range 3
+            elif current_delt_y_range == 4:
+                await self.change_velocity(1, 1700)
+            self.prev_delt_y_range = current_delt_y_range  # Update previous range
 
         correction_scale_x = self.effective_pixel_size * self.motion_scale_x
         correction_scale_y = self.effective_pixel_size * self.motion_scale_y
@@ -221,7 +225,6 @@ class MotorOperations:
         steps_x = steps_x / 1
         steps_y = steps_y / 1
 
-
         # direction: invert steps for x-axis correction on microlens/lenslet array plate
         # direction: invert steps for x-axis correction on relay mirror
         invert = -1
@@ -237,7 +240,6 @@ class MotorOperations:
         #print('Delta Y: ' + str(self.delt_y))
         #print('Delta X: ' + str(self.delt_x))
 
-
         if abs(self.delt_y) > self.margin_of_error:
             # print('delta y moving')
             # print('motor number is ' + str(self.motor))
@@ -251,16 +253,17 @@ class MotorOperations:
             #print('stopped motion y')
             await asyncio.sleep(0.001)
 
-        await asyncio.sleep(0.001)
-        # moving = True
-        # while moving:
-        #     try:
-        #         moving = self.controller.is_moving(self.motor)
-        #         if not moving:
-        #             break
-        #     except Exception as e:
-        #         print(f"Error checking if motor is moving: {e}")
-        #         await asyncio.sleep(0.001)
+        #await asyncio.sleep(0.001)
+        moving = True
+        while moving:
+            try:
+                moving = self.controller.is_moving(self.motor)
+                if not moving:
+                    break
+            except Exception as e:
+                print(f"Error checking if motor is moving: {e}")
+                await asyncio.sleep(0.001)
+            await asyncio.sleep(0.001)
 
         self.motor = 2
         # x axis motor
@@ -275,12 +278,23 @@ class MotorOperations:
             #self.controller.stop(axis='all', immediate=True)
             await asyncio.sleep(0.001)
 
+        # moving = True
+        # while moving:
+        #     try:
+        #         moving = self.controller.is_moving(self.motor)
+        #         if not moving:
+        #             break
+        #     except Exception as e:
+        #         print(f"Error checking if motor is moving: {e}")
+        #         await asyncio.sleep(0.001)
+        #     await asyncio.sleep(0.001)
+
         #if abs(self.delt_x) > self.margin_of_error and abs(self.delt_y) > self.margin_of_error:
         #    self.controller.stop(axis='all', immediate=True)
 
         if abs(self.delt_x) > self.margin_of_error or abs(self.delt_y) > self.margin_of_error:
             if abs(self.delt_x - self.delt_x_previous) > self.stall_threshold or abs(
-                self.delt_y - self.delt_y_previous) > self.stall_threshold:
+                    self.delt_y - self.delt_y_previous) > self.stall_threshold:
                 self.stall_count += 1
             else:
                 self.stall_count = 0
@@ -336,7 +350,6 @@ class MotorOperations:
                 break
             await asyncio.sleep(0.01)
 
-
     async def calibrate(self, filename):
 
         print("Beginning Calibration")
@@ -353,6 +366,15 @@ class MotorOperations:
             print(f"First x and y: {self.delt_x}, {self.delt_y}")
 
             await asyncio.sleep(3)
+
+            print("Setting Reference Points, Standby")
+
+            # position 1 is the motors at zenith, position 0 is motors at t=0 of exposure
+            self.motor = 1
+            await self.set_position_reference(position=1)
+            await asyncio.sleep(2)
+            self.motor = 2
+            await self.set_position_reference(position=1)
 
             # for the microlens array plate & mirror nosecone plate
             # move y motor in negative motor direction to get positive y shift to find slope
@@ -372,7 +394,7 @@ class MotorOperations:
                 self.theta = theta
                 print(f'Theta = {self.theta}')
                 f = open(filename, 'a')
-                f.write('\n'+str(datetime.now()) + '\n' + str(self.theta))
+                f.write('\n' + str(datetime.now()) + '\n' + str(self.theta))
                 f.close()
             elif second_x == first_x:
                 self.theta = 0
@@ -442,8 +464,6 @@ class MotorOperations:
 
             await asyncio.sleep(0.001)
 
-
-
         while True:
             data, _ = pico_sock.recvfrom(4096)  # Buffer size
             self.delt_x, self.delt_y, self.x, self.y = map(float, data.decode().split(','))
@@ -454,12 +474,15 @@ class MotorOperations:
             # print ('X is : ' + str(self.x))
 
             #if self.x != -1.00 and self.arduino.light:
-            if self.x != -1.00:
+
+            if self.x != -1.00 and self.controller.is_moving(1) != True and self.controller.is_moving(2) != True:
                 await self.control_picomotors()
+
+            # if self.x != -1.00:
+            #     await self.control_picomotors()
 
             #await self.control_picomotors()
             await asyncio.sleep(0.001)
-
 
     def set_velocity(self, speed, acceleration=10000):
         self.controller.setup_velocity(self.motor, speed=speed, accel=acceleration)
@@ -505,7 +528,7 @@ class MotorOperations:
         """
         self.controller.move_by(self.motor, steps)
 
-        self.motor_steps[self.motor-1] += steps
+        self.motor_steps[self.motor - 1] = self.motor_steps[self.motor - 1] + steps
 
         start_time = time.time()
         timeout = 10  # Timeout in n seconds
@@ -530,7 +553,6 @@ class MotorOperations:
             except Exception as e:
                 print(f"Error checking if motor is moving: {e}")
                 await asyncio.sleep(0.001)
-
 
             # time.sleep(0.001)
             await asyncio.sleep(0.001)
@@ -725,5 +747,7 @@ if __name__ == "__main__":
                 stop_motors(controller)
                 loop.close()
                 controller.close()
+
+
             end()
             print("done")
