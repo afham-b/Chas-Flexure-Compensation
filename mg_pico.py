@@ -313,7 +313,7 @@ if __name__ == "__main__":
 
             await asyncio.sleep(0.5)
 
-            # Wait for the async function to complete
+            # Wait for the async function to complete moving the motors back to the middle
             await motor_y.counter_steps()
 
             # Turn off Arduino-

@@ -354,7 +354,7 @@ class MotorOperations:
 
         print("Beginning Calibration")
         #print('Past Stored Theta Values:' + str(self.theta))
-        await asyncio.sleep(1)
+        await asyncio.sleep(5)
         print(f"Calibrate Picomotors: {self.delt_x}, {self.delt_y}")
         # print('Motor Number: ' + str(self.motor))
 
@@ -376,12 +376,14 @@ class MotorOperations:
             self.motor = 2
             await self.set_position_reference(position=1)
 
+            await asyncio.sleep(3)
+
             # for the microlens array plate & mirror nosecone plate
             # move y motor in negative motor direction to get positive y shift to find slope
             invert = -1
-            #calibration_steps = 5000*invert
             calibration_steps = 5000
 
+            self.motor = 1
             await self.move_by_steps(calibration_steps)
             await asyncio.sleep(3)
 
@@ -390,7 +392,9 @@ class MotorOperations:
             second_x = self.delt_x
 
             if second_y != first_y and second_x != first_x:
-                theta = math.asin((second_x - first_x) / (second_y - first_y))
+                ratio = (second_x - first_x) / (second_y - first_y)
+                print(ratio)
+                theta = math.asin(ratio)
                 self.theta = theta
                 print(f'Theta = {self.theta}')
                 f = open(filename, 'a')
@@ -496,6 +500,11 @@ class MotorOperations:
             return
 
         print(self.motor_steps)
+
+        self.motor = 1
+        await self.move_to_position(1)
+        self.motor = 2
+        await self.move_to_position(1)
 
         # for i in range(4):
         #     self.motor = i + 1  # Set motor to the current motor number
