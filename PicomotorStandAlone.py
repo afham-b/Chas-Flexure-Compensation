@@ -506,6 +506,7 @@ class MotorOperations:
         self.motor = 2
         await self.move_to_position(1)
 
+        return True
         # for i in range(4):
         #     self.motor = i + 1  # Set motor to the current motor number
         #     motor_counter_steps = -1 * self.motor_steps[i]  # Calculate counter steps

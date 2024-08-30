@@ -313,8 +313,20 @@ if __name__ == "__main__":
 
             await asyncio.sleep(0.5)
 
+            homed = False
             # Wait for the async function to complete moving the motors back to the middle
-            await motor_y.counter_steps()
+            homed = await motor_y.counter_steps()
+
+            #max timer for homing loop (~ 3 min is 360 times)
+            homing_time = 0
+
+            # wait until homing is done
+            while not homed:
+                homed = await motor_y.counter_steps()
+                homing_time = homing_time + 1
+                await asyncio.sleep(0.5)  # Sleep briefly to avoid a busy loop
+                if homing_time > 360:
+                    break
 
             # Turn off Arduino-
             arduino.stop()
