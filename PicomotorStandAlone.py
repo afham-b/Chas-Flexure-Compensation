@@ -499,14 +499,52 @@ class MotorOperations:
         if n == 0:
             return
 
-        print(self.motor_steps)
+        #print(self.motor_steps)
+
+        #set to max speed
+        await self.change_velocity(1,1700)
+        await self.change_velocity(2,1700)
+
+        total_steps_y = self.controller.get_position(1)
+        print(total_steps_y)
+        total_steps_x = self.controller.get_position(2)
+        print(total_steps_x)
+
+        homing_time_y = 0
+        homing_time_y_max = (total_steps_y / 1700) + 5
+        print(homing_time_y_max)
+
+        homing_time_x = 0
+        homing_time_x_max = (total_steps_x / 1700) + 5
+        print(homing_time_x_max)
+
+        # if unsure of steps give each motor 1 min to reset
+        default_homing_time = 60 #seconds
 
         self.motor = 1
+        #await self.move_to_position(1, self.controller)
         await self.move_to_position(1)
+        print('Motor 1 Homed')
+
+        while self.controller.is_moving():
+            homing_time_y += 1
+            if homing_time_y > default_homing_time:
+                break
+            await asyncio.sleep(1)
+
         self.motor = 2
         await self.move_to_position(1)
+        print('Motor 2 Homed')
 
-        return True
+        while self.controller.is_moving():
+            homing_time_x += 1
+            if homing_time_x > default_homing_time:
+                break
+            await asyncio.sleep(0.5)
+
+        if not self.controller.is_moving(1) and not self.controller.is_moving(2):
+            return True
+
         # for i in range(4):
         #     self.motor = i + 1  # Set motor to the current motor number
         #     motor_counter_steps = -1 * self.motor_steps[i]  # Calculate counter steps

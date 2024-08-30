@@ -291,6 +291,21 @@ async def main():
     await starting()
 
 
+async def homing():
+    global homed
+    homed = False
+    # Wait for the async function to complete moving the motors back to the middle
+    homed = await motor_y.counter_steps()
+
+async def homing_time():
+    timer = 0
+    while True:
+        if homed or (timer > 180):
+            break
+        timer += 1
+        await asyncio.sleep(1)
+    return
+
 # If using run_as_admin:
 """if __name__ == "__main__":
     if ctypes.windll.shell32.IsUserAnAdmin() == 0:
@@ -313,20 +328,9 @@ if __name__ == "__main__":
 
             await asyncio.sleep(0.5)
 
-            homed = False
-            # Wait for the async function to complete moving the motors back to the middle
-            homed = await motor_y.counter_steps()
-
-            #max timer for homing loop (~ 3 min is 360 times)
-            homing_time = 0
-
             # wait until homing is done
-            while not homed:
-                homed = await motor_y.counter_steps()
-                homing_time = homing_time + 1
-                await asyncio.sleep(0.5)  # Sleep briefly to avoid a busy loop
-                if homing_time > 360:
-                    break
+            await asyncio.gather(homing(), homing_time())
+
 
             # Turn off Arduino-
             arduino.stop()
