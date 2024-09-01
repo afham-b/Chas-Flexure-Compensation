@@ -505,20 +505,20 @@ class MotorOperations:
         await self.change_velocity(1,1700)
         await self.change_velocity(2,1700)
 
-        self.motor =1
-        total_steps_y = self.controller.get_position()
-        print(total_steps_y)
-        self.motor =2
-        total_steps_x = self.controller.get_position()
-        print(total_steps_x)
+        #self.motor =1
+        #total_steps_y = int(self.controller.get_position())
+        #print(total_steps_y)
+        #self.motor =2
+        #total_steps_x = int(self.controller.get_position())
+        #print(total_steps_x)
 
         homing_time_y = 0
-        homing_time_y_max = (total_steps_y / 1700) + 5
-        print(homing_time_y_max)
+        #homing_time_y_max = (total_steps_y / 1700) + 5
+        #print(homing_time_y_max)
 
         homing_time_x = 0
-        homing_time_x_max = (total_steps_x / 1700) + 5
-        print(homing_time_x_max)
+        #homing_time_x_max = (total_steps_x / 1700) + 5
+        #print(homing_time_x_max)
 
         # if unsure of steps give each motor 1 min to reset
         default_homing_time = 60 #seconds
