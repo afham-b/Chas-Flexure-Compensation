@@ -7,7 +7,7 @@ def calculate_broadcast_address(ip: str, mask: str) -> str:
     return str(network.broadcast_address)
 
 # Example usage
-ip_address = '169.254.105.194'
+ip_address = '169.254.227.23'
 subnet_mask = '255.255.0.0'
 
 broadcast_address = calculate_broadcast_address(ip_address, subnet_mask)

@@ -53,7 +53,7 @@ log = open('pico_log.txt', 'a')
 #correction_scale = effective_pixel_size * motion_scale
 
 global arduino
-arduino = ArduinoController('COM7', 8, 2)
+arduino = ArduinoController('COM5', 8, 2)
 #give arduino time to initialize and switch the relay on
 time.sleep(10)
 
@@ -91,11 +91,12 @@ def kill_processes(pids, sig=signal.SIGTERM):
             print(f"    No process found with PID {pid}.")
             return None
     for pid in pids:
-        try:
-            os.kill(pid, sig)
-            print(f"    Process with PID {pid} terminated: "+get_program_name(pid))
-        except OSError as e:
-            print(f"    Error {e} terminating process {pid}: "+get_program_name(pid))
+        if pid is not None:
+            try:
+                os.kill(pid, sig)
+                print(f"    Process with PID {pid} terminated: "+get_program_name(pid))
+            except OSError as e:
+                print(f"    Error {e} terminating process {pid}: "+get_program_name(pid))
     print(f"    Processes killed")
 
 
