@@ -228,7 +228,7 @@ class MotorOperations:
         # direction: invert steps for x-axis correction on microlens/lenslet array plate
         # direction: invert steps for x-axis correction on relay mirror
         invert = -1
-        steps_x = steps_x * invert
+        #steps_x = steps_x * invert
         steps_y = steps_y * invert
         #print(f"Steps_x and y: {steps_x}, {steps_y}")
 
