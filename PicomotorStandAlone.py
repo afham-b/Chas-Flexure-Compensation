@@ -15,8 +15,8 @@ server_address = ('127.0.0.1', 5002)  # Use the same address and port as MGListe
 pico_sock.bind(server_address)
 
 # file name of the calibration data
-filename = 'calibration_data.txt'  # microlens lenslets
-#filename = 'calibration_data_nosecone.txt' #nosecone relay
+#filename = 'calibration_data.txt'  # microlens lenslets
+filename = 'calibration_data_nosecone.txt' #nosecone relay
 
 log = open('pico_log.txt', 'a')
 
@@ -228,12 +228,14 @@ class MotorOperations:
         # direction: invert steps for x-axis correction on microlens/lenslet array plate
         # direction: invert steps for x-axis correction on relay mirror
         invert = -1
-        #steps_x = steps_x * invert
+        steps_x = steps_x * invert
         steps_y = steps_y * invert
         #print(f"Steps_x and y: {steps_x}, {steps_y}")
 
         #y-axis motor
         self.motor = 1
+        #relay motor y axis is 3
+        #self.motor = 3
 
         # for testing
         #print("Correction Beginning, @Line nnn")
@@ -265,8 +267,11 @@ class MotorOperations:
                 await asyncio.sleep(0.001)
             await asyncio.sleep(0.001)
 
+        # x axis for lenslet microlens
         self.motor = 2
-        # x axis motor
+        # x axis motor for relay
+        #self.motor = 4
+
         if abs(self.delt_x) > self.margin_of_error:
             #print('delta x moving')
             # switch to motor 2 to move the x-axis since self by default is y

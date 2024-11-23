@@ -21,14 +21,16 @@ import asyncio
 #     time.sleep(3)
 
 class ArduinoController:
-    def __init__(self, port, light_pin=8, relay_pin=2):
+    def __init__(self, port, light_pin=8, relay_pin=2, second_light_pin=7):
         self.board = pyfirmata.Arduino(port)
         self.pin = light_pin
         self.relay_pin = relay_pin
+        self.second_light_pin = second_light_pin
         time.sleep(1)  # Allow time for the board to initialize
 
         # default is to start with the light on
         self.board.digital[self.pin].write(1)
+        self.board.digital[self.second_light_pin].write(1)
         #self.board.digital[self.relay_pin].write(1)
 
 
@@ -42,28 +44,49 @@ class ArduinoController:
         print('Relay ON! Picomotor Controller Powered')
 
         self.light = True  # light is true :. light is on
+        self.light1 = True #light 1 is default for lensletts
+        self.light2 = True #light 2 is for relay
         self.relay = True   #the relay is open :. control board should have power
 
     async def toggle_led(self, on_time=1, off_time=1):
         while True:
             self.board.digital[self.pin].write(1)
+            self.board.digital[self.second_light_pin].write(1)
             self.light = True
             #print(self.light)
             await asyncio.sleep(on_time)
 
             self.board.digital[self.pin].write(0)
+            self.board.digital[self.second_light_pin].write(0)
             self.light = False
             #print(self.light)
             await asyncio.sleep(off_time)
 
     def light_on(self):
         self.board.digital[self.pin].write(1)
+        self.board.digital[self.second_light_pin].write(1)
         self.light = True
 
     def light_off(self):
         self.board.digital[self.pin].write(0)
+        self.board.digital[self.second_light_pin].write(0)
         self.light = False
 
+    def light1_on(self):
+        self.board.digital[self.pin].write(1)
+        self.light1 = True
+
+    def light1_off(self):
+        self.board.digital[self.pin].write(0)
+        self.light1 = False
+
+    def secondLight_on(self):
+        self.board.digital[self.second_light_pin].write(1)
+        self.light2 = True
+
+    def secondLight_off(self):
+        self.board.digital[self.second_light_pin].write(0)
+        self.light2 = False
 
     async def relay_off(self):
         try:
@@ -95,6 +118,7 @@ class ArduinoController:
 
     def stop(self):
         self.board.digital[self.pin].write(0)
+        self.board.digital[self.second_light_pin].write(0)
         #self.board.digital[self.relay_pin].write(0)
         self.board.exit()
         #sys.exit(0)
@@ -102,7 +126,7 @@ class ArduinoController:
 # Example usage:
 if __name__ == "__main__":
     #ensure that you have the correct com port, check com ports in device manager to view
-    arduino = ArduinoController('COM5', 8, 2)
+    arduino = ArduinoController('COM5', 8, 2, 7)
     try:
         #arduino.toggle_led(on_time=1, off_time=15)
         arduino.light_on()

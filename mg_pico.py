@@ -53,7 +53,7 @@ log = open('pico_log.txt', 'a')
 #correction_scale = effective_pixel_size * motion_scale
 
 global arduino
-arduino = ArduinoController('COM5', 8, 2)
+arduino = ArduinoController('COM5', 8, 2, 7)
 #give arduino time to initialize and switch the relay on
 time.sleep(10)
 
@@ -208,9 +208,8 @@ async def main():
 
     #scope_setup_path = r'C:\Users\linz\Documents\GitHub\Picomotor-Controls-1\test1.mg'
 
-    #os.startfile(relay_scope_setup_path)
-
-    os.startfile(lenslet_scope_setup_path)
+    os.startfile(relay_scope_setup_path)
+    #os.startfile(lenslet_scope_setup_path)
     time.sleep(10)
 
     # To see monitoring graphs:
