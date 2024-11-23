@@ -6,3 +6,5 @@ Picomotors respond to light source detected by ASI290MM Mini camera and tracked 
 Run mg_pico.py to correct. Run calibration.py to calibrate specific system (microlens vs nosecone).
 
 test1.mg contains saved MetaGuide settings 
+
+See Documentation PDF for detailed instructions
