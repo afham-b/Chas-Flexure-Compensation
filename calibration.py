@@ -61,12 +61,12 @@ log = open('pico_log.txt', 'a')
 #camera_pixel_size = 2.9
 #effective_pixel_size = camera_pixel_size / magnification
 
-# set scale factor for picomotor motion from camera feedback
+# set scale factor for picomotor motsion from camera feedback
 #motion_scale = 0.01
 #correction_scale = effective_pixel_size * motion_scale
 
 global arduino
-arduino = ArduinoController('COM5', 8, 2, 7)
+arduino = ArduinoController('COM7', 8, 2, 7)
 #give arduino time to initialize and switch the relay on
 time.sleep(5)
 

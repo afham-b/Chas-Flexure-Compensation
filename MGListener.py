@@ -46,24 +46,24 @@ class MGListener(threading.Thread):
         # start threading if giving threading error, otherwise comment out
         # threading.Thread.__init__(self)
 
-        self.relay_port = port
-        self.lenslet_port = port+1
+        self.port = port
+        self.relay_port = port+1
         self.timeout = timeout
         self.deadtime = deadtime
 
-        #relay variables
+        #lenslet variables
         self.x = -1             # x coordinate of centroid
         self.y = -1             # y
         self.x_init = 0        # initial x coordinate
         self.y_init = 0        # initial y coordinate
         self.initialized = False
 
-        #lenslet variables
-        self.lenslet_x = -1
-        self.lenslet_y = -1
-        self.lenslet_x_init = 0
-        self.lenslet_y_init = 0
-        self.lenslet_initialized = False
+        #relay variables
+        self.relay_x = -1
+        self.relay_y = -1
+        self.relay_x_init = 0
+        self.relay_y_init = 0
+        self.relay_initialized = False
 
 
         self.ew = 0             # east/west component relative to center of screen
@@ -124,18 +124,18 @@ class MGListener(threading.Thread):
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.sock.setblocking(False)
 
-            # self.lenslet_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-            # self.lenslet_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            # self.lenslet_sock.setblocking(False)
+            self.relay_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+            self.relay_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.relay_sock.setblocking(False)
 
         except:
             print("Error creating socket")
             return
         try:
-            self.sock.bind(('', self.relay_port))
-            # self.lenslet_sock.bind(('', self.lenslet_port))
+            self.sock.bind(('', self.port))
+            self.relay_sock.bind(('', self.relay_port))
         except:
-            print("Error binding to port", self.relay_port, self.lenslet_port)
+            print("Error binding to port", self.port, self.relay_port)
             return
         self.listenMessages = True
         self.threadLock = threading.Lock()
@@ -203,10 +203,7 @@ class MGListener(threading.Thread):
                 ready = select.select([self.sock], [], [], self.timeout)
                 if ready[0]:
                     bmsg, _ = self.sock.recvfrom(1024)
-
-                # ready_lenslet = select.select([self.lenslet_sock], [], [], self.timeout)
-                # if ready_lenslet[0]:
-                #     cmsg, _ = self.lenslet_sock.recvfrom(1024)
+                    #cmsg, _ = self.relay_sock.recvfrom(1024)
 
                 else:
                     # print("No data received after timeout - keep going")
@@ -229,7 +226,7 @@ class MGListener(threading.Thread):
             # lenslet_msg = cmsg.decode('utf-8')
             # lenslet_msgs = lenslet_msg.split()
             # lenslet_ntok = len(lenslet_msgs)
-            # self.lenslet_msgtext = lenslet_msg
+            # self.relay_msgtext = lenslet_msg
 
             # corrupt message - ignore
             if ntok < 6:

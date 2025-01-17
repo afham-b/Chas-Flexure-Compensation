@@ -53,7 +53,7 @@ log = open('pico_log.txt', 'a')
 #correction_scale = effective_pixel_size * motion_scale
 
 global arduino
-arduino = ArduinoController('COM5', 8, 2, 7)
+arduino = ArduinoController('COM7', 8, 2, 7)
 #give arduino time to initialize and switch the relay on
 time.sleep(10)
 
@@ -201,16 +201,19 @@ async def main():
     # remember to change to your own path!
 
     # settings for the relay on chas
-    relay_scope_setup_path = r'C:\Users\afham\Documents\MetaGuide\relaytest1.mg'
+    relay_scope_setup_path = r'C:\Users\afham\Documents\MetaGuide\relaytestsim.mg'
 
     #setting for the lenslet array on the nosecone inside of chas
     lenslet_scope_setup_path = r'C:\Users\afham\Documents\MetaGuide\fibertest1.mg'
 
     #scope_setup_path = r'C:\Users\linz\Documents\GitHub\Picomotor-Controls-1\test1.mg'
 
+
+    os.startfile(lenslet_scope_setup_path)
+    time.sleep(5)
     os.startfile(relay_scope_setup_path)
-    #os.startfile(lenslet_scope_setup_path)
-    time.sleep(10)
+    time.sleep(5)
+
 
     # To see monitoring graphs:
     # monitor_path = r'C:\Program Files (x86)\MetaGuide\MetaMonitor.exe'
@@ -344,6 +347,13 @@ if __name__ == "__main__":
             apid = get_pid('ASCOM.TelescopeSimulator.exe')
             pids_to_kill = [mgpid, apid]
             kill_processes(pids_to_kill)
+
+            # get second mg open for relay
+            mgpid = get_pid('MetaGuide.exe')
+            apid = get_pid('ASCOM.TelescopeSimulator.exe')
+            if mgpid or apid:
+                pids_to_kill = [mgpid, apid]
+                kill_processes(pids_to_kill)
 
             # Clean ports
             cleaner = SocketCleaner()

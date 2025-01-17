@@ -34,5 +34,5 @@ class ArduinoController:
 
 # Example usage:
 if __name__ == "__main__":
-    arduino = ArduinoController('COM5', 8, 7)
+    arduino = ArduinoController('COM7', 8, 7)
     arduino.keep_led_on()

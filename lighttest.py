@@ -126,7 +126,7 @@ class ArduinoController:
 # Example usage:
 if __name__ == "__main__":
     #ensure that you have the correct com port, check com ports in device manager to view
-    arduino = ArduinoController('COM5', 8, 2, 7)
+    arduino = ArduinoController('COM7', 8, 2, 7)
     try:
         #arduino.toggle_led(on_time=1, off_time=15)
         arduino.light_on()
