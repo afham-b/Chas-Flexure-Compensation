@@ -123,20 +123,27 @@ class MGListener(threading.Thread):
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.sock.setblocking(False)
-
+        except:
+            print("Error creating lenslet socket")
+            return
+        try:
             self.relay_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
             self.relay_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.relay_sock.setblocking(False)
-
         except:
-            print("Error creating socket")
+            print("Error creating relay socket")
             return
         try:
             self.sock.bind(('', self.port))
+        except:
+            print("Error binding to lenslet port", self.port)
+            return
+        try:
             self.relay_sock.bind(('', self.relay_port))
         except:
-            print("Error binding to port", self.port, self.relay_port)
+            print("Error binding to relay port", self.relay_port)
             return
+
         self.listenMessages = True
         self.threadLock = threading.Lock()
         self.threadLock.acquire()
@@ -203,7 +210,6 @@ class MGListener(threading.Thread):
                 ready = select.select([self.sock], [], [], self.timeout)
                 if ready[0]:
                     bmsg, _ = self.sock.recvfrom(1024)
-                    #cmsg, _ = self.relay_sock.recvfrom(1024)
 
                 else:
                     # print("No data received after timeout - keep going")
@@ -212,9 +218,25 @@ class MGListener(threading.Thread):
                         self.isDead()
                     continue
             except:
-                #print("Error receiving from socket.  Continuing")
+                print("Error receiving from lenslet socket.  Continuing")
                 self.tquiet = time.time()-tlastmsg
                 continue
+
+            try:
+                ready_relay = select.select([self.relay_sock], [], [], self.timeout)
+                if ready_relay[0]:
+                    cmsg, _ = self.relay_sock.recvfrom(1024)
+                else:
+                    print("Relay socket timeout, no data received")
+                    self.tquiet = time.time()-tlastmsg
+                    if self.tquiet > self.deadtime:
+                        self.isDead()
+                    continue
+            except:
+                print("Error receiving from relay socket.  Continuing")
+                self.tquiet = time.time()-tlastmsg
+                continue
+
 
             # for relay data from metagudie
             msg = bmsg.decode('utf-8')
@@ -223,10 +245,10 @@ class MGListener(threading.Thread):
             self.msgtxt = msg
 
             #for lenslet data from second metaguide instance
-            # lenslet_msg = cmsg.decode('utf-8')
-            # lenslet_msgs = lenslet_msg.split()
-            # lenslet_ntok = len(lenslet_msgs)
-            # self.relay_msgtext = lenslet_msg
+            lenslet_msg = cmsg.decode('utf-8')
+            lenslet_msgs = lenslet_msg.split()
+            lenslet_ntok = len(lenslet_msgs)
+            self.relay_msgtext = lenslet_msg
 
             # corrupt message - ignore
             if ntok < 6:
