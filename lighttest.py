@@ -36,7 +36,7 @@ class ArduinoController:
 
         # default is to start with the relay closed, meaning the pico control motors are on
         # this will activate the relay switch :. turning controller board off
-        self.board.digital[self.relay_pin].write(1)
+        #self.board.digital[self.relay_pin].write(1)
         #print('Relay OFF! ')
         #time.sleep(5)
 

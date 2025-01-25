@@ -238,17 +238,17 @@ class MGListener(threading.Thread):
                 continue
 
 
-            # for relay data from metagudie
+            # for lenslet data from metagudie
             msg = bmsg.decode('utf-8')
             msgs = msg.split()
             ntok = len(msgs)
             self.msgtxt = msg
 
-            #for lenslet data from second metaguide instance
-            lenslet_msg = cmsg.decode('utf-8')
-            lenslet_msgs = lenslet_msg.split()
-            lenslet_ntok = len(lenslet_msgs)
-            self.relay_msgtext = lenslet_msg
+            #for relay data from second metaguide instance
+            relay_msg = cmsg.decode('utf-8')
+            relay_msgs = relay_msg.split()
+            relay_ntok = len(relay_msgs)
+            self.relay_msgtext = relay_msg
 
             # corrupt message - ignore
             if ntok < 6:
@@ -343,13 +343,99 @@ class MGListener(threading.Thread):
                 self.tquiet = time.time()-tlastmsg
                 return
 
-            # for the lenslet
-            # past and modify lines 233- 323
+
+            #for the relay secondary system
+            if relay_msgs[0] == 'OPENSCI' and relay_msgs[1] == 'ASTRO' and relay_msgs[3] == 'MG':
+                typ = relay_msgs[2]
+                if typ == 'CAMERA':
+                    if relay_ntok < 11:
+                        return
+                    self.relay_exposure = int(relay_msgs[5])
+                    self.relay_gain = int(relay_msgs[6])
+                    self.relay_minexposure = int(relay_msgs[7])
+                    self.relay_maxexposure = int(relay_msgs[8])
+                    self.relay_mingain = int(relay_msgs[9])
+                    self.relay_maxgain = int(relay_msgs[10])
+                    self.relay_msg = typ
+                elif typ == 'STATUS':
+                    if relay_ntok < 23:
+                        return
+                    self.relay_x = float(relay_msgs[5])
+                    self.relay_y = float(relay_msgs[6])
+                    self.relay_ew = float(relay_msgs[7])
+                    self.relay_ns = float(relay_msgs[8])
+                    self.relay_ewcos = float(relay_msgs[9])
+                    self.relay_intens = float(relay_msgs[10])
+                    self.relay_fwhm = float(relay_msgs[11])
+                    self.relay_seeing = float(relay_msgs[12])
+                    self.relay_guidemode = int(relay_msgs[13])
+                    self.relay_de = float(relay_msgs[14])
+                    self.relay_dn = float(relay_msgs[15])
+                    self.relay_locked = int(relay_msgs[16])
+                    self.relay_width = int(relay_msgs[17])
+                    self.relay_height = int(relay_msgs[18])
+                    self.relay_calstate = int(relay_msgs[19])
+                    self.relay_westside = int(relay_msgs[20])
+                    self.relay_ra = float(relay_msgs[21])
+                    self.relay_dec = float(relay_msgs[22])
+                    if relay_ntok > 23:
+                        self.relay_fl = float(relay_msgs[23])
+                        self.relay_pixsize = float(relay_msgs[24])
+                        self.relay_arcsecperpix = float(relay_msgs[25])
+                    if relay_ntok > 26:
+                        self.relay_guiding = int(relay_msgs[26])
+                    if relay_ntok == 29:
+                        self.relay_mgversion = relay_msgs[27]
+                        self.relay_guidefilterversion = relay_msgs[28]
+                    # only update time of last message when status is received
+                    tlastmsg = time.time()
+                    self.relay_tquiet = 0
+                    self.relay_msg = typ
+                elif typ == 'GUIDE':
+                    if relay_ntok < 10:
+                        return
+                    self.relay_tnow = float(relay_msgs[5])  # timeGetTime() in seconds
+                    self.relay_time = float(relay_msgs[6])  # time since log start in seconds
+                    self.relay_wpulse = int(relay_msgs[7])  # pulse times milliseconds
+                    self.relay_npulse = int(relay_msgs[8])
+                    self.relay_calstate = int(relay_msgs[9])
+                    self.relay_msg = typ
+                elif typ == 'GUIDEPARMS':
+                    if relay_ntok < 14:
+                        return
+                    self.relay_rarate = float(relay_msgs[5])
+                    self.relay_decrate = float(relay_msgs[6])
+                    self.relay_raagg = float(relay_msgs[7])
+                    self.relay_decagg = float(relay_msgs[8])
+                    self.relay_relay_minmove = float(relay_msgs[9])
+                    self.relay_maxmove = float(relay_msgs[10])
+                    self.relay_decrev = float(relay_msgs[11])
+                    self.relay_nsrev = int(relay_msgs[12])
+                    self.relay_ewrev = int(relay_msgs[13])
+                    self.relay_msg = typ
+                elif typ == 'CALINFO':
+                    if relay_ntok < 11:
+                        return
+                    self.relay_wangle = float(relay_msgs[5])
+                    self.relay_parity = int(relay_msgs[6])
+                    self.relay_wx = float(relay_msgs[7])
+                    self.relay_wy = float(relay_msgs[8])
+                    self.relay_nx = float(relay_msgs[9])
+                    self.relay_ny = float(relay_msgs[10])
+                    self.relay_msg = typ
+                elif typ == 'MOUNTNAME':
+                    if relay_ntok < 6:
+                        return
+                    self.relay_mountname = relay_msgs[5]
+                    self.relay_msg = typ
+            else:
+                self.relay_tquiet = time.time() - tlastmsg
+                return
 
             # only get here if a good message was received and parsed
             # now invoke the user's function in a subclass
             if loop_tracker == 0 and (self.x > 0 or self.y > 0):
-                if self.x != -1.00:
+                if self.x != -1.00 and self.relay_x != -1.00:
                     self.firstxy()
                     loop_tracker = loop_tracker + 1
 
@@ -372,12 +458,18 @@ class MyListener(MGListener):
         self.x_init = self.x
         self.y_init = self.y
 
-        inits.write('initials pixels (x,y): ' + str(round(self.x_init, 4)) + ', ' + str(round(self.y_init, 4)))
+        self.relay_x_init = self.relay_x
+        self.relay_y_init = self.relay_y
+
+        inits.write('initials lenslet pixels (x,y): ' + str(round(self.x_init, 4)) + ', ' + str(round(self.y_init, 4)))
+
+        #think about relay inits write file, for the return home feature
+        #inits.write('initials relay pixels (x,y): ' + str(round(self.relay_x_init, 4)) + ', ' + str(round(self.relay_y_init, 4)))
 
         self.initialized = True
+        self.relay_initialized = True
 
-        #print("Initial X, Y of the star are: ", self.x_init, self.y_init)
-
+        #print("Initial X, Y of the star are: ", self.x_init, self.y_init")
 
 
     def doit(self):
