@@ -1,3 +1,7 @@
+#this script awakens the newport controller box if it's not on already, if its is already on,
+#then this script effectively provides a restart
+
+
 import sys
 import pyfirmata
 import time
@@ -17,29 +21,14 @@ class ArduinoController:
 
         self.light = True  # light is true :. light is on
 
-    def keep_led_on(self):
-        while True:
-            try:
-                self.board.digital[self.pin].write(1)
-                self.board.digital[self.pin2].write(1)
-
-                #lets the motors be alive at the same time
-                self.board.digital[self.relay_pin].write(1)
-
-                self.light = True
-                time.sleep(1)
-            except KeyboardInterrupt:
-                self.stop()
-                break
-
-    def stop(self):
-        self.board.digital[self.pin].write(0)
-        self.board.digital[self.pin2].write(0)
-        self.board.digital[self.relay_pin].write(0)
+    def motors_on(self):
+        self.board.digital[self.relay_pin].write(1)
+        time.sleep(1)
+        #self.board.digital[self.relay_pin].write(0)
         self.board.exit()
         sys.exit(0)
 
 # Example usage:
 if __name__ == "__main__":
     arduino = ArduinoController('COM7', 8, 7,2)
-    arduino.keep_led_on()
+    arduino.motors_on()
