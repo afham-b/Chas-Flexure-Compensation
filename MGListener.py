@@ -461,6 +461,9 @@ class MyListener(MGListener):
         self.relay_x_init = self.relay_x
         self.relay_y_init = self.relay_y
 
+        #testing
+        print('inital relay coordinates are x,y:' + str((round(self.relay_x_init, 4))) +', '+ str(round(self.relay_y_init, 4)))
+
         inits.write('initials lenslet pixels (x,y): ' + str(round(self.x_init, 4)) + ', ' + str(round(self.y_init, 4)))
 
         #think about relay inits write file, for the return home feature
